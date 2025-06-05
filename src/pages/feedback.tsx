@@ -1,5 +1,4 @@
 import { Check, X } from "lucide-react";
-import { BottomMenu } from "../components/bottom-menu";
 import { ListboxComponent } from "../components/list-box-component";
 import { useNavigate } from "react-router-dom";
 
@@ -11,7 +10,7 @@ export function Feedback() {
   }
 
   return (
-    <main className="h-screen flex flex-col items-center pt-4">
+    <div className="flex flex-col items-center">
       <h1 className="text-2xl">Histórico de Feedbacks</h1>
       <div className="p-4 w-full">
         <span className="text-base font-semibold">Estilos</span>
@@ -72,7 +71,6 @@ export function Feedback() {
           </tbody>
         </table>
       </div>
-      <BottomMenu />
-    </main>
+    </div>
   );
 }
