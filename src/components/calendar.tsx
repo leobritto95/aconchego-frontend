@@ -213,7 +213,7 @@ export function Calendar() {
                       setSelectedDate(calendarRef.getApi().getDate());
                     }
                   }}
-                  className="bg-amber-900 border border-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
+                  className="bg-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
                   aria-label="Semana anterior"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -225,7 +225,7 @@ export function Calendar() {
                       setSelectedDate(calendarRef.getApi().getDate());
                     }
                   }}
-                  className="bg-amber-900 border border-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
+                  className="bg-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
                   aria-label="Próxima semana"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
