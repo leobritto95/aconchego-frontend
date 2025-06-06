@@ -32,10 +32,10 @@ export const MobileDateStrip: React.FC<MobileDateStripProps> = ({ selectedDate, 
               <span className="text-xs text-gray-600">{weekDays[date.getDay()]}</span>
               <span className="text-xs text-gray-500">{months[date.getMonth()]}</span>
               <button
-                className={`rounded-full w-8 h-8 flex items-center justify-center mt-1 transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                className={`rounded-full w-8 h-8 flex items-center justify-center mt-1 transition-all focus:outline-none ${
                   isSelected
-                    ? 'bg-purple-600 text-white font-bold scale-110 shadow-lg'
-                    : 'text-purple-800 hover:bg-gray-100'
+                    ? 'bg-amber-900 text-white font-bold scale-110 shadow-lg'
+                    : 'text-amber-900 hover:bg-amber-100'
                 }`}
                 onClick={() => onChange(date)}
               >

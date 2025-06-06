@@ -198,10 +198,10 @@ export function Calendar() {
   return (
     <div className="flex-1 flex flex-col pb-20">
       <div className="flex-1 flex flex-col bg-white rounded-lg shadow-lg">
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <div className="p-4 border-b border-amber-200 bg-amber-100 rounded-t-lg shadow-sm">
           <div className="flex items-center justify-between sm:justify-between flex-col sm:flex-row gap-4 sm:gap-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-gray-900 hidden sm:block">Agenda</h2>
+              <h2 className="text-2xl font-bold text-amber-900 hidden sm:block drop-shadow-sm">Agenda</h2>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start">
               {/* Setas de navegação */}
@@ -213,7 +213,7 @@ export function Calendar() {
                       setSelectedDate(calendarRef.getApi().getDate());
                     }
                   }}
-                  className="bg-purple-600 border border-purple-600 text-white hover:bg-purple-700 hover:border-purple-700 cursor-pointer rounded transition-colors duration-150 outline-none focus:outline-none focus:ring-2 focus:ring-purple-300 p-1 mx-0.5"
+                  className="bg-amber-900 border border-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
                   aria-label="Semana anterior"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -225,7 +225,7 @@ export function Calendar() {
                       setSelectedDate(calendarRef.getApi().getDate());
                     }
                   }}
-                  className="bg-purple-600 border border-purple-600 text-white hover:bg-purple-700 hover:border-purple-700 cursor-pointer rounded transition-colors duration-150 outline-none focus:outline-none focus:ring-2 focus:ring-purple-300 p-1 mx-0.5"
+                  className="bg-amber-900 border border-amber-900 text-white hover:bg-amber-800 hover:border-amber-800 cursor-pointer rounded shadow-md transition-colors duration-150 outline-none focus:outline-none p-1 mx-0.5 border-2 border-amber-200"
                   aria-label="Próxima semana"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -236,7 +236,7 @@ export function Calendar() {
                   type="date"
                   value={selectedDate.toISOString().slice(0, 10)}
                   onChange={(e) => handleDateFilter(e.target.value)}
-                  className="block w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm bg-white/80 backdrop-blur-sm pl-8"
+                  className="block w-full sm:w-auto rounded-md border-amber-200 shadow-sm focus:border-amber-900 sm:text-sm bg-white/80 backdrop-blur-sm pl-8"
                 />
                 <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -250,7 +250,7 @@ export function Calendar() {
                       calendarRef.getApi().gotoDate(new Date());
                     }
                   }}
-                  className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                  className="text-sm text-amber-900 hover:text-amber-800 font-bold flex items-center gap-1"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -271,7 +271,7 @@ export function Calendar() {
           }}
         />
         <div className="flex-1 p-0 sm:p-4 overflow-hidden">
-          <div className="relative fc-theme-standard [&_.fc-header-toolbar]:hidden [&_.fc-button]:bg-purple-600 [&_.fc-button]:border-purple-600 [&_.fc-button:hover]:bg-purple-500 [&_.fc-button:hover]:border-purple-500 [&_.fc-button]:transition-colors [&_.fc-button]:duration-150 [&_.fc-button]:outline-none [&_.fc-button:focus]:outline-none [&_.fc-button:focus]:ring-2 [&_.fc-button:focus]:ring-purple-300 [&_.fc-event]:shadow-sm [&_.fc-event]:border-l-4 [&_.fc-event]:rounded-md [&_.fc-event]:transition-all [&_.fc-event]:duration-150 [&_.fc-event:hover]:shadow-md [&_.fc-event:hover]:scale-[1.02] [&_.fc-timegrid-slot]:border-gray-100 [&_.fc-timegrid-slot-label]:text-gray-500 [&_.fc-timegrid-slot-label]:font-medium [&_.fc-col-header-cell]:bg-gray-50 [&_.fc-col-header-cell]:text-gray-700 [&_.fc-col-header-cell]:font-bold [&_.fc-col-header-cell]:text-lg [&_.fc-col-header-cell]:py-4 [&_.fc-timegrid-axis]:align-top [&_.fc-timegrid-axis]:w-20 [&_.fc-col-header-cell:first-child]:w-20">
+          <div className="relative fc-theme-standard [&_.fc-header-toolbar]:hidden [&_.fc-button]:bg-slate-600 [&_.fc-button]:border-slate-600 [&_.fc-button:hover]:bg-slate-500 [&_.fc-button:hover]:border-slate-500 [&_.fc-button]:transition-colors [&_.fc-button]:duration-150 [&_.fc-button]:outline-none [&_.fc-button:focus]:outline-none [&_.fc-button:focus]:ring-2 [&_.fc-button:focus]:ring-slate-300 [&_.fc-event]:shadow-sm [&_.fc-event]:border-l-4 [&_.fc-event]:rounded-md [&_.fc-event]:transition-all [&_.fc-event]:duration-150 [&_.fc-event:hover]:shadow-md [&_.fc-event:hover]:scale-[1.02] [&_.fc-timegrid-slot]:border-gray-100 [&_.fc-timegrid-slot-label]:text-gray-500 [&_.fc-timegrid-slot-label]:font-medium [&_.fc-col-header-cell]:bg-gray-50 [&_.fc-col-header-cell]:text-gray-700 [&_.fc-col-header-cell]:font-bold [&_.fc-col-header-cell]:text-lg [&_.fc-col-header-cell]:py-4 [&_.fc-timegrid-axis]:align-top [&_.fc-timegrid-axis]:w-20 [&_.fc-col-header-cell:first-child]:w-20">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView={isMobile ? "timeGridDay" : "timeGridWeek"}

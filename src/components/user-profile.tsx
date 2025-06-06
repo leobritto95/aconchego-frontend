@@ -23,7 +23,7 @@ export function UserProfile() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-200 transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white">
+        <div className="w-8 h-8 rounded-full bg-amber-900 flex items-center justify-center text-white border-2 border-amber-200 shadow">
           <User size={20} />
         </div>
         <span className="hidden md:block text-sm font-medium text-gray-700">Leandro</span>

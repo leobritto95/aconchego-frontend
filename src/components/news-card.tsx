@@ -3,9 +3,9 @@ export function NewsCard() {
     <div>
       <a
         href="#"
-        className="block p-6 bg-gray-100 border border-gray-400 rounded-lg shadow hover:bg-gray-200"
+        className="block p-6 bg-white border border-amber-100 rounded-lg shadow hover:bg-amber-50 transition-colors"
       >
-        <h5 className="mb-2 text-2xl font-bold tracking-tight">
+        <h5 className="mb-2 text-2xl font-bold tracking-tight text-amber-900">
           Título notícia
         </h5>
         <p className="font-normal text-gray-700">
