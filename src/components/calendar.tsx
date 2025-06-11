@@ -35,14 +35,25 @@ const mockEvents = [
   },
 ];
 
+interface UserData {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+}
+
+function hasEventManagementPermission(userRole: string): boolean {
+  return ['teacher', 'secretary', 'admin'].includes(userRole);
+}
+
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   event?: EventClickArg['event'] | null;
-  isAdmin?: boolean;
+  canManageEvents?: boolean;
 }
 
-function EventModal({ isOpen, onClose, event, isAdmin = false }: EventModalProps) {
+function EventModal({ isOpen, onClose, event, canManageEvents = false }: EventModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -74,7 +85,7 @@ function EventModal({ isOpen, onClose, event, isAdmin = false }: EventModalProps
                 {event.start?.toLocaleString('pt-BR')} - {event.end?.toLocaleString('pt-BR')}
               </p>
             </div>
-            {isAdmin && (
+            {canManageEvents && (
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={onClose}
@@ -148,10 +159,18 @@ function EventModal({ isOpen, onClose, event, isAdmin = false }: EventModalProps
 export function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<EventClickArg['event'] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAdmin] = useState(true);
+  const [canManageEvents, setCanManageEvents] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData: UserData = JSON.parse(storedUser);
+      setCanManageEvents(hasEventManagementPermission(userData.role));
+    }
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -188,7 +207,7 @@ export function Calendar() {
   };
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
-    if (isAdmin) {
+    if (canManageEvents) {
       setSelectedEvent(null);
       setIsModalOpen(true);
       console.log('Data selecionada:', selectInfo.start, 'até', selectInfo.end);
@@ -280,7 +299,7 @@ export function Calendar() {
               locale={ptBrLocale}
               events={mockEvents}
               eventClick={handleEventClick}
-              selectable={isAdmin}
+              selectable={canManageEvents}
               select={handleDateSelect}
               height="100%"
               slotMinTime="06:00:00"
@@ -294,8 +313,8 @@ export function Calendar() {
               nowIndicator={true}
               selectMirror={true}
               dayMaxEventRows={true}
-              editable={isAdmin}
-              droppable={isAdmin}
+              editable={canManageEvents}
+              droppable={canManageEvents}
               eventTimeFormat={{
                 hour: '2-digit',
                 minute: '2-digit',
@@ -330,7 +349,7 @@ export function Calendar() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           event={selectedEvent}
-          isAdmin={isAdmin}
+          canManageEvents={canManageEvents}
         />
       </div>
     </div>
