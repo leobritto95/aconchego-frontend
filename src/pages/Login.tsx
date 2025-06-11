@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 // Mocked users for each role
 const MOCK_USERS = [
-  { id: 1, email: 'student@example.com', password: '123456', name: 'User Estudante', role: 'student' },
-  { id: 2, email: 'teacher@example.com', password: '123456', name: 'User Professor', role: 'teacher' },
-  { id: 3, email: 'secretary@example.com', password: '123456', name: 'User Secretaria', role: 'secretary' },
-  { id: 4, email: 'admin@example.com', password: '123456', name: 'User Administrador', role: 'admin' },
+  { id: 1, email: 'student@gmail.com', password: '123456', name: 'User Estudante', role: 'student' },
+  { id: 2, email: 'teacher@gmail.com', password: '123456', name: 'User Professor', role: 'teacher' },
+  { id: 3, email: 'secretary@gmail.com', password: '123456', name: 'User Secretaria', role: 'secretary' },
+  { id: 4, email: 'admin@gmail.com', password: '123456', name: 'User Administrador', role: 'admin' },
 ];
 
 export function Login() {
