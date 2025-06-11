@@ -5,10 +5,10 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 // Mocked users for each role
 const MOCK_USERS = [
-  { id: 1, email: 'student@gmail.com', password: '123456', name: 'User Estudante', role: 'student' },
-  { id: 2, email: 'teacher@gmail.com', password: '123456', name: 'User Professor', role: 'teacher' },
-  { id: 3, email: 'secretary@gmail.com', password: '123456', name: 'User Secretaria', role: 'secretary' },
-  { id: 4, email: 'admin@gmail.com', password: '123456', name: 'User Administrador', role: 'admin' },
+  { id: 1, email: 'aluno@email.com', password: '123456', name: 'User Estudante', role: 'student' },
+  { id: 2, email: 'professor@email.com', password: '123456', name: 'User Professor', role: 'teacher' },
+  { id: 3, email: 'secretaria@email.com', password: '123456', name: 'User Secretaria', role: 'secretary' },
+  { id: 4, email: 'admin@email.com', password: '123456', name: 'User Admin', role: 'admin' },
 ];
 
 export function Login() {
