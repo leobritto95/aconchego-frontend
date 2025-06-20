@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { ApiResponse } from '../types'
 
-// Cria instância do axios com configuração base
 const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
@@ -10,7 +9,6 @@ const api = axios.create({
   },
 })
 
-// Interceptor para adicionar token de autenticação
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -24,16 +22,12 @@ api.interceptors.request.use(
   }
 )
 
-// Interceptor para tratamento de respostas
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Retorna apenas os dados da resposta
     return response.data
   },
   (error: AxiosError) => {
-    // Tratamento de erros
     if (error.response) {
-      // Erro do servidor (status 4xx, 5xx)
       const status = error.response.status
       const data = error.response.data as any
 
@@ -82,7 +76,6 @@ api.interceptors.response.use(
   }
 )
 
-// Função helper para fazer requisições tipadas
 export const apiRequest = async <T>(
   method: 'get' | 'post' | 'put' | 'delete',
   url: string,

@@ -1,17 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import { FeedbackService } from '../services/feedbackService'
+import { useAuth } from './useAuth'
+import { canViewAllFeedbacks, getCurrentUserId } from '../utils/permissions'
 
-export function useFeedbacks(
+export function useFeedback(
   page: number = 1,
   limit: number = 10,
   style?: string,
   classFilter?: string,
-  year?: string
+  startDate?: string,
+  endDate?: string
 ) {
+  const { user } = useAuth()
+
+  // Determina se deve filtrar por usuário baseado no papel
+  const shouldFilterByUser = user && !canViewAllFeedbacks(user || null)
+  const userId = shouldFilterByUser ? getCurrentUserId() || undefined : undefined
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['feedbacks', page, limit, style, classFilter, year],
-    queryFn: () => FeedbackService.getFeedbacks(page, limit, style, classFilter, year),
+    queryKey: ['feedbacks', page, limit, style, classFilter, startDate, endDate, userId],
+    queryFn: () => FeedbackService.getFeedbacks(page, limit, style, classFilter, startDate, endDate, userId),
     staleTime: 3 * 60 * 1000, // 3 minutos
+    enabled: !!user, // Só executa se tiver usuário logado
   })
 
   return {
@@ -30,8 +40,71 @@ export function useFeedbacks(
   }
 }
 
-// Alias para compatibilidade com código existente
-export const useFeedback = useFeedbacks
+export function useGroupedClasses(style?: string, classFilter?: string, startDate?: string, endDate?: string) {
+  const { user } = useAuth()
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['groupedClasses', style, classFilter, startDate, endDate],
+    queryFn: () => FeedbackService.getGroupedClasses(style, classFilter, startDate, endDate),
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    enabled: !!user && canViewAllFeedbacks(user || null), // Só executa se tiver usuário logado e puder ver todos os feedbacks
+  })
+
+  return {
+    classes: data?.success ? data.data : [],
+    isLoading,
+    error: error?.message || null,
+    refetch,
+    success: data?.success || false,
+    message: data?.message || ''
+  }
+}
+
+export function useStudentGroupedClasses(
+  style?: string,
+  classFilter?: string,
+  startDate?: string,
+  endDate?: string
+) {
+  const { user } = useAuth()
+  const userId = getCurrentUserId()
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['studentGroupedClasses', userId, style, classFilter, startDate, endDate],
+    queryFn: () => FeedbackService.getStudentGroupedClasses(userId!, style, classFilter, startDate, endDate),
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    enabled: !!user && !!userId && !canViewAllFeedbacks(user || null), // Só executa se tiver usuário logado e for aluno
+  })
+
+  return {
+    classes: data?.success ? data.data : [],
+    isLoading,
+    error: error?.message || null,
+    refetch,
+    success: data?.success || false,
+    message: data?.message || ''
+  }
+}
+
+export function useFeedbacksByClassId(classId: number) {
+  const { user } = useAuth()
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['feedbacksByClassId', classId],
+    queryFn: () => FeedbackService.getFeedbacksByClassId(classId),
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    enabled: !!user && canViewAllFeedbacks(user || null) && !!classId,
+  })
+
+  return {
+    feedbacks: data?.success ? data.data : [],
+    isLoading,
+    error: error?.message || null,
+    refetch,
+    success: data?.success || false,
+    message: data?.message || ''
+  }
+}
 
 export function useFeedbackById(id: number) {
   const { data, isLoading, error } = useQuery({
@@ -60,7 +133,6 @@ export function useFilterOptions() {
   return {
     styles: data?.styles || [],
     classes: data?.classes || [],
-    years: data?.years || [],
     isLoading,
     error: error?.message || null
   }

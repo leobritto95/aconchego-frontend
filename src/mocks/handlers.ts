@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { mockUsers, mockEvents, mockNews, mockFeedbacks, mockStyles, mockClasses, mockYears } from '../services/mockData'
+import { mockUsers, mockEvents, mockNews, mockFeedbacks, mockStyles, mockClasses } from '../services/mockData'
 
 // Simula delay de rede
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -169,9 +169,17 @@ export const handlers = [
       const limit = parseInt(url.searchParams.get('limit') || '10')
       const style = url.searchParams.get('style')
       const classFilter = url.searchParams.get('class')
-      const year = url.searchParams.get('year')
+      const startDate = url.searchParams.get('startDate')
+      const endDate = url.searchParams.get('endDate')
+      const userId = url.searchParams.get('userId')
 
       let filteredFeedbacks = mockFeedbacks
+
+      // Filtra por userId se fornecido (para alunos que só podem ver seus próprios feedbacks)
+      if (userId) {
+        const userIdNum = parseInt(userId)
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.studentId === userIdNum)
+      }
 
       if (style) {
         filteredFeedbacks = filteredFeedbacks.filter(f => f.style === style)
@@ -181,8 +189,12 @@ export const handlers = [
         filteredFeedbacks = filteredFeedbacks.filter(f => f.class === classFilter)
       }
 
-      if (year) {
-        filteredFeedbacks = filteredFeedbacks.filter(f => f.date.startsWith(year))
+      if (startDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date >= startDate)
+      }
+
+      if (endDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date <= endDate)
       }
 
       const startIndex = (page - 1) * limit
@@ -209,6 +221,179 @@ export const handlers = [
     }
   }),
 
+  // Nova rota para buscar turmas agrupadas por data
+  http.get('/api/feedback/classes', async ({ request }) => {
+    try {
+      simulateNetworkError()
+      await delay(300)
+
+      const url = new URL(request.url)
+      const style = url.searchParams.get('style')
+      const classFilter = url.searchParams.get('class')
+      const startDate = url.searchParams.get('startDate')
+      const endDate = url.searchParams.get('endDate')
+
+      // Filtra feedbacks baseado nos parâmetros
+      let filteredFeedbacks = mockFeedbacks
+
+      if (style) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.style === style)
+      }
+
+      if (classFilter) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.class === classFilter)
+      }
+
+      if (startDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date >= startDate)
+      }
+
+      if (endDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date <= endDate)
+      }
+
+      const grouped: { [key: string]: { classId: number; className: string; style: string; date: string; count: number } } = {}
+
+      filteredFeedbacks.forEach((feedback) => {
+        const key = `${feedback.classId}-${feedback.style}-${feedback.date}`
+        if (!grouped[key]) {
+          grouped[key] = {
+            classId: feedback.classId,
+            className: feedback.class,
+            style: feedback.style,
+            date: feedback.date,
+            count: 0
+          }
+        }
+        grouped[key].count++
+      })
+
+      // Converte para array e ordena por data (mais recente primeiro)
+      const classes = Object.values(grouped)
+        .map(item => ({
+          classId: item.classId,
+          className: item.className,
+          style: item.style,
+          date: item.date,
+          feedbackCount: item.count
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+      return HttpResponse.json({
+        success: true,
+        data: classes,
+        message: 'Turmas agrupadas carregadas com sucesso'
+      })
+    } catch (error) {
+      return HttpResponse.json(
+        { success: false, message: 'Erro de conexão. Tente novamente.' },
+        { status: 500 }
+      )
+    }
+  }),
+
+  // Nova rota para buscar turmas agrupadas do aluno
+  http.get('/api/feedback/student/classes', async ({ request }) => {
+    try {
+      simulateNetworkError()
+      await delay(300)
+
+      const url = new URL(request.url)
+      const userId = url.searchParams.get('userId')
+      const style = url.searchParams.get('style')
+      const classFilter = url.searchParams.get('class')
+      const startDate = url.searchParams.get('startDate')
+      const endDate = url.searchParams.get('endDate')
+
+      if (!userId) {
+        return HttpResponse.json(
+          { success: false, message: 'ID do usuário é obrigatório' },
+          { status: 400 }
+        )
+      }
+
+      // Filtra feedbacks do usuário específico
+      let filteredFeedbacks = mockFeedbacks.filter(f => f.studentId === parseInt(userId))
+
+      if (style) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.style === style)
+      }
+
+      if (classFilter) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.class === classFilter)
+      }
+
+      if (startDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date >= startDate)
+      }
+
+      if (endDate) {
+        filteredFeedbacks = filteredFeedbacks.filter(f => f.date <= endDate)
+      }
+
+      const grouped: { [key: string]: { classId: number; className: string; style: string; date: string; count: number } } = {}
+
+      filteredFeedbacks.forEach((feedback) => {
+        const key = `${feedback.classId}-${feedback.style}-${feedback.date}`
+        if (!grouped[key]) {
+          grouped[key] = {
+            classId: feedback.classId,
+            className: feedback.class,
+            style: feedback.style,
+            date: feedback.date,
+            count: 0
+          }
+        }
+        grouped[key].count++
+      })
+
+      // Converte para array e ordena por data (mais recente primeiro)
+      const classes = Object.values(grouped)
+        .map(item => ({
+          classId: item.classId,
+          className: item.className,
+          style: item.style,
+          date: item.date,
+          feedbackCount: item.count
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+      return HttpResponse.json({
+        success: true,
+        data: classes,
+        message: 'Turmas agrupadas do aluno carregadas com sucesso'
+      })
+    } catch (error) {
+      return HttpResponse.json(
+        { success: false, message: 'Erro de conexão. Tente novamente.' },
+        { status: 500 }
+      )
+    }
+  }),
+
+  // Nova rota para buscar feedbacks de uma turma específica por ID
+  http.get('/api/feedback/class/:classId', async ({ params }) => {
+    try {
+      simulateNetworkError()
+      await delay(300)
+
+      const classId = parseInt(params.classId as string)
+
+      const feedbacks = mockFeedbacks.filter(f => f.classId === classId)
+
+      return HttpResponse.json({
+        success: true,
+        data: feedbacks,
+        message: 'Feedbacks da turma carregados com sucesso'
+      })
+    } catch (error) {
+      return HttpResponse.json(
+        { success: false, message: 'Erro de conexão. Tente novamente.' },
+        { status: 500 }
+      )
+    }
+  }),
+
   http.get('/api/feedback/:id', async ({ params }) => {
     try {
       simulateNetworkError()
@@ -222,6 +407,28 @@ export const handlers = [
           { success: false, message: 'Feedback não encontrado' },
           { status: 404 }
         )
+      }
+
+      // Verifica permissões do usuário
+      const userStr = localStorage.getItem('user')
+
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr)
+
+          // Se é aluno, só pode ver seus próprios feedbacks
+          if (user.role === 'student' && user.id !== feedback.studentId) {
+            return HttpResponse.json(
+              { success: false, message: 'Acesso negado. Você só pode ver seus próprios feedbacks.' },
+              { status: 403 }
+            )
+          }
+
+          // Admin, professor e secretaria podem ver qualquer feedback
+          // (não precisa de verificação adicional)
+        } catch (error) {
+          // Se não conseguir parsear o usuário, continua normalmente
+        }
       }
 
       return HttpResponse.json({
@@ -251,17 +458,8 @@ export const handlers = [
     await delay(200)
     return HttpResponse.json({
       success: true,
-      data: mockClasses,
+      data: mockClasses.map(c => c.name),
       message: 'Turmas carregadas com sucesso'
-    })
-  }),
-
-  http.get('/api/filters/years', async () => {
-    await delay(200)
-    return HttpResponse.json({
-      success: true,
-      data: mockYears,
-      message: 'Anos carregados com sucesso'
     })
   })
 ] 

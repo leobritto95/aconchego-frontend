@@ -1,15 +1,21 @@
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+} from "react-router-dom";
 import { Main } from "./pages/main";
 import { News } from "./pages/news";
 import { Feedback } from "./pages/feedback";
 import { FeedbackDetails } from "./pages/feedback-details";
+import { ClassFeedbacks } from "./pages/class-feedbacks";
+import { StudentClassFeedbacksPage } from "./pages/student-class-feedbacks";
 import { Layout } from "./components/layout";
 import { Login } from "./pages/Login";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const user = localStorage.getItem('user');
-  
+  const user = localStorage.getItem("user");
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -24,19 +30,51 @@ const router = createBrowserRouter([
   },
   {
     path: "/",
-    element: <ProtectedRoute><Main /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <Main />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/news",
-    element: <ProtectedRoute><News /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <News />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/feedback",
-    element: <ProtectedRoute><Feedback /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <Feedback />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/feedback/:feedbackId",
-    element: <ProtectedRoute><FeedbackDetails /></ProtectedRoute>,
+    element: (
+      <ProtectedRoute>
+        <FeedbackDetails />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/feedback/class/:classId",
+    element: (
+      <ProtectedRoute>
+        <ClassFeedbacks />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/student-class-feedbacks/:classId",
+    element: (
+      <ProtectedRoute>
+        <StudentClassFeedbacksPage />
+      </ProtectedRoute>
+    ),
   },
 ]);
 

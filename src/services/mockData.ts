@@ -1,4 +1,4 @@
-import { User, Event, News, Feedback } from '../types';
+import { User, Event, News, Feedback, Class } from '../types';
 
 // Mock Users
 export const mockUsers: User[] = [
@@ -6,6 +6,20 @@ export const mockUsers: User[] = [
   { id: 2, email: 'professor@email.com', name: 'Maria Santos', role: 'teacher' },
   { id: 3, email: 'secretaria@email.com', name: 'Pedro Costa', role: 'secretary' },
   { id: 4, email: 'admin@email.com', name: 'Ana Oliveira', role: 'admin' },
+  { id: 5, email: 'aluno2@email.com', name: 'Carlos Mendes', role: 'student' },
+  { id: 6, email: 'aluno3@email.com', name: 'Fernanda Lima', role: 'student' },
+  { id: 7, email: 'aluno4@email.com', name: 'Roberto Alves', role: 'student' },
+  { id: 8, email: 'aluno5@email.com', name: 'Patrícia Costa', role: 'student' },
+  { id: 9, email: 'aluno6@email.com', name: 'Lucas Oliveira', role: 'student' },
+  { id: 10, email: 'aluno7@email.com', name: 'Amanda Santos', role: 'student' },
+];
+
+// Mock Classes
+export const mockClasses: Class[] = [
+  { id: 1, name: 'Turma A', date: '2024-11-15' },
+  { id: 2, name: 'Turma B', date: '2024-09-20' },
+  { id: 3, name: 'Turma X', date: '2024-10-06' },
+  { id: 4, name: 'Turma Z', date: '2024-12-10' },
 ];
 
 // Mock Events
@@ -105,10 +119,12 @@ export const mockNews: News[] = [
 export const mockFeedbacks: Feedback[] = [
   {
     id: 1,
+    studentId: 1, // João Silva (aluno)
+    classId: 3, // Turma X
     style: 'Forró',
     class: 'Turma X',
     date: '2024-10-06',
-    grade: 2.6,
+    average: 2.6,
     status: 'rejected',
     evaluatorFeedback: 'O aluno demonstrou dificuldades na coordenação rítmica e na execução dos passos básicos. Recomenda-se mais prática individual e aulas de reforço.',
     parameters: {
@@ -121,10 +137,12 @@ export const mockFeedbacks: Feedback[] = [
   },
   {
     id: 2,
+    studentId: 1, // João Silva (aluno)
+    classId: 3, // Turma X
     style: 'Forró',
     class: 'Turma X',
     date: '2024-10-06',
-    grade: 4.0,
+    average: 4.0,
     status: 'approved',
     evaluatorFeedback: 'Excelente desempenho! O aluno demonstrou domínio técnico e expressão artística. Continue praticando para manter o nível.',
     parameters: {
@@ -137,10 +155,12 @@ export const mockFeedbacks: Feedback[] = [
   },
   {
     id: 3,
+    studentId: 5, // Outro aluno (não existe no mockUsers, mas simula outro aluno)
+    classId: 4, // Turma Z
     style: 'Jazz',
     class: 'Turma Z',
     date: '2024-12-10',
-    grade: 2.0,
+    average: 2.0,
     status: 'rejected',
     evaluatorFeedback: 'O aluno precisa melhorar significativamente na técnica e na interpretação musical. Sugere-se retomar os fundamentos básicos.',
     parameters: {
@@ -153,10 +173,12 @@ export const mockFeedbacks: Feedback[] = [
   },
   {
     id: 4,
+    studentId: 6, // Outro aluno
+    classId: 1, // Turma A
     style: 'Samba',
     class: 'Turma A',
     date: '2024-11-15',
-    grade: 3.8,
+    average: 3.8,
     status: 'approved',
     evaluatorFeedback: 'Bom desempenho geral. O aluno demonstrou boa técnica e ritmo. Pode melhorar na expressão facial e corporal.',
     parameters: {
@@ -169,10 +191,12 @@ export const mockFeedbacks: Feedback[] = [
   },
   {
     id: 5,
+    studentId: 7, // Outro aluno
+    classId: 2, // Turma B
     style: 'Bolero',
     class: 'Turma B',
     date: '2024-09-20',
-    grade: 3.2,
+    average: 3.2,
     status: 'approved',
     evaluatorFeedback: 'Desempenho satisfatório. O aluno demonstrou compreensão dos conceitos básicos. Continue praticando para aprimorar a técnica.',
     parameters: {
@@ -182,10 +206,64 @@ export const mockFeedbacks: Feedback[] = [
       parameter4: 4,
       parameter5: 3
     }
+  },
+  {
+    id: 6,
+    studentId: 8, // Outro aluno
+    classId: 1, // Turma A
+    style: 'Samba',
+    class: 'Turma A',
+    date: '2024-11-15',
+    average: 4.2,
+    status: 'approved',
+    evaluatorFeedback: 'Excelente performance! O aluno demonstrou domínio completo da técnica e expressão artística.',
+    parameters: {
+      parameter1: 4,
+      parameter2: 4,
+      parameter3: 4,
+      parameter4: 5,
+      parameter5: 4
+    }
+  },
+  {
+    id: 7,
+    studentId: 9, // Outro aluno
+    classId: 2, // Turma B
+    style: 'Bolero',
+    class: 'Turma B',
+    date: '2024-09-20',
+    average: 2.8,
+    status: 'rejected',
+    evaluatorFeedback: 'O aluno precisa melhorar na coordenação e ritmo. Recomenda-se mais prática.',
+    parameters: {
+      parameter1: 3,
+      parameter2: 2,
+      parameter3: 3,
+      parameter4: 3,
+      parameter5: 3
+    }
+  },
+  {
+    id: 8,
+    studentId: 10, // Outro aluno
+    classId: 4, // Turma Z
+    style: 'Jazz',
+    class: 'Turma Z',
+    date: '2024-12-10',
+    average: 3.6,
+    status: 'approved',
+    evaluatorFeedback: 'Bom desempenho. O aluno demonstrou boa técnica e criatividade.',
+    parameters: {
+      parameter1: 4,
+      parameter2: 3,
+      parameter3: 4,
+      parameter4: 3,
+      parameter5: 4
+    }
   }
 ];
 
 // Mock data para filtros
 export const mockStyles = ['Forró', 'Jazz', 'Samba', 'Bolero', 'Tango', 'Valsa'];
-export const mockClasses = ['Turma A', 'Turma B', 'Turma X', 'Turma Z', 'Turma Y'];
+export const mockClassNames = ['Turma A', 'Turma B', 'Turma X', 'Turma Z', 'Turma Y'];
 export const mockYears = ['2024', '2023', '2022', '2021']; 

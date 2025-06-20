@@ -6,6 +6,13 @@ export interface User {
   role: 'student' | 'teacher' | 'secretary' | 'admin';
 }
 
+// Class types
+export interface Class {
+  id: number;
+  name: string;
+  date: string;
+}
+
 // Event types
 export interface Event {
   id: string;
@@ -30,10 +37,12 @@ export interface News {
 // Feedback types
 export interface Feedback {
   id: number;
+  studentId: number;
+  classId: number;
   style: string;
   class: string;
   date: string;
-  grade: number;
+  average: number;
   status: 'approved' | 'rejected';
   evaluatorFeedback?: string;
   parameters?: {
