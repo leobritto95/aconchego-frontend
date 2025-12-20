@@ -30,45 +30,33 @@ api.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const data = error.response.data as any
+      const url = error.config?.url || ''
 
       switch (status) {
         case 401:
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          window.location.href = '/login'
-          break
+          // Não redirecionar se estiver na página de login (para mostrar erro)
+          if (!url.includes('/auth/login')) {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            window.location.href = '/login'
+          }
+          // Lançar erro com mensagem do servidor
+          throw new Error(data?.message || 'Credenciais inválidas')
         case 403:
-          console.error('Acesso negado')
-          break
+          throw new Error(data?.message || 'Acesso negado')
         case 404:
-          console.error('Recurso não encontrado')
-          break
+          throw new Error(data?.message || 'Recurso não encontrado')
         case 500:
-          console.error('Erro interno do servidor')
-          break
+          throw new Error(data?.message || 'Erro interno do servidor')
         default:
-          console.error('Erro desconhecido:', data?.message || error.message)
+          throw new Error(data?.message || 'Erro desconhecido')
       }
-
-      return Promise.reject({
-        success: false,
-        message: data?.message || 'Erro desconhecido',
-        status
-      })
     } else if (error.request) {
       console.error('Erro de conexão:', error.message)
-      return Promise.reject({
-        success: false,
-        message: 'Erro de conexão. Verifique sua internet.',
-        status: 0
-      })
+      throw new Error('Erro de conexão. Verifique sua internet.')
     } else {
       console.error('Erro na requisição:', error.message)
-      return Promise.reject({
-        success: false,
-        message: 'Erro na configuração da requisição',
-        status: 0
-      })
+      throw new Error('Erro na configuração da requisição')
     }
   }
 )
@@ -87,17 +75,28 @@ export const apiRequest = async <T>(
       params,
     }) as any
 
-    return {
+    const apiResponse: ApiResponse<T> = {
       success: response.success ?? true,
       data: response.data as T,
       message: response.message || 'Operação realizada com sucesso'
     }
-  } catch (error: any) {
-    return {
-      success: false,
-      data: null as T,
-      message: error.message || 'Erro desconhecido'
+
+    // Se a resposta indica erro (success: false), lançar exceção para o React Query detectar
+    if (!apiResponse.success) {
+      const error = new Error(apiResponse.message || 'Erro desconhecido')
+      throw error
     }
+
+    return apiResponse
+  } catch (error: any) {
+    // Se já é um Error object com mensagem, re-lançar
+    if (error instanceof Error) {
+      throw error
+    }
+
+    // Caso contrário, criar erro com a mensagem
+    const errorMessage = error.message || error?.response?.data?.message || 'Erro desconhecido'
+    throw new Error(errorMessage)
   }
 }
 

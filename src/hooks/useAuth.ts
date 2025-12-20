@@ -25,7 +25,7 @@ export function useAuth() {
         queryClient.setQueryData(['user'], response.data.user)
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Erro no login:', error)
     }
   })
