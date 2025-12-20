@@ -164,8 +164,15 @@ export function Calendar() {
   const [isMobile, setIsMobile] = useState(false);
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(
+    null
+  );
 
-  const { events, isLoading, error, refetch } = useEvents();
+  const { events, isLoading, error, refetch } = useEvents(
+    dateRange?.start,
+    dateRange?.end
+  );
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -194,6 +201,11 @@ export function Calendar() {
   }, [calendarRef, selectedDate]);
 
   const handleDatesSet = (arg: DatesSetArg) => {
+    setDateRange({
+      start: arg.start.toISOString(),
+      end: arg.end.toISOString(),
+    });
+    
     if (isMobile) {
       setSelectedDate(arg.start);
     }

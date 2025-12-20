@@ -6,7 +6,7 @@ export function useEvents(start?: string, end?: string) {
     queryKey: ['events', start, end],
     queryFn: () => EventService.getEvents(start, end),
     staleTime: 2 * 60 * 1000, // 2 minutos
-    enabled: true, // Sempre executa
+    enabled: !!(start && end), // Só executa quando temos range de datas
   })
 
   return {
