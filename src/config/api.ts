@@ -63,6 +63,16 @@ export const API_ENDPOINTS = {
     CLASSES: '/filters/classes',
     YEARS: '/filters/years',
   },
+
+  // Classes
+  CLASSES: {
+    LIST: '/classes',
+    DETAIL: (id: string) => `/classes/${id}`,
+    CREATE: '/classes',
+    UPDATE: (id: string) => `/classes/${id}`,
+    DELETE: (id: string) => `/classes/${id}`,
+    REGISTER_STUDENT: (id: string) => `/classes/${id}/students`,
+  },
 };
 
 // Códigos de status HTTP

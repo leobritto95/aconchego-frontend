@@ -7,10 +7,25 @@ export interface User {
 }
 
 // Class types
+export interface ScheduleTime {
+  startTime: string; // "19:00"
+  endTime: string; // "21:00"
+}
+
 export interface Class {
-  id: number;
+  id: number | string;
   name: string;
-  date: string;
+  style?: string;
+  description?: string;
+  teacherId?: string;
+  // Campos de recorrência (todas as classes usam o mesmo sistema)
+  active?: boolean;
+  recurringDays: number[]; // [2, 3] = terça e quarta
+  scheduleTimes: Record<string, ScheduleTime>; // { "2": { startTime: "19:00", endTime: "21:00" }, ... }
+  startDate: string; // Data de início da recorrência (ou data única da classe)
+  endDate?: string | null; // Data de fim (null = sem limite)
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Event types
@@ -22,6 +37,10 @@ export interface Event {
   backgroundColor?: string;
   borderColor?: string;
   description?: string;
+  extendedProps?: {
+    type: 'recurring-class' | 'single-event';
+    classId?: string;
+  };
 }
 
 // News types
@@ -72,4 +91,15 @@ export interface LoginCredentials {
 export interface LoginResponse {
   user: User;
   token: string;
+}
+
+// ClassException types
+export interface ClassException {
+  id: string;
+  classId: string;
+  date: string;
+  reason?: string;
+  className?: string;
+  createdAt?: string;
+  updatedAt?: string;
 } 
