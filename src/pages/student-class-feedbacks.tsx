@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useFeedback } from "../hooks/useFeedback";
 import { Feedback } from "../types";
-import { ArrowLeft, Music, Check, X, Calendar } from "lucide-react";
+import { ArrowLeft, Music, Check, X, Clock, Calendar } from "lucide-react";
 import { getCurrentUserId } from "../utils/permissions";
 
 // Componente para exibir um feedback individual
@@ -33,6 +33,11 @@ function FeedbackCard({ feedback }: { feedback: Feedback }) {
               <Check className="w-4 h-4 mr-1" />
               <span className="text-sm">Aprovado</span>
             </div>
+          ) : feedback.status === "pending" ? (
+            <div className="flex items-center justify-center text-yellow-600">
+              <Clock className="w-4 h-4 mr-1" />
+              <span className="text-sm">Pendente</span>
+            </div>
           ) : (
             <div className="flex items-center justify-center text-red-600">
               <X className="w-4 h-4 mr-1" />
@@ -61,9 +66,10 @@ export function StudentClassFeedbacksPage() {
   );
 
   // Filtra apenas os feedbacks da turma específica e do aluno logado
+  // Compara como string para evitar problemas com ObjectIds
   const filteredFeedbacks = feedbacks.filter(
     (f) =>
-      f.classId === parseInt(classId || "0") && f.studentId === currentUserId
+      String(f.classId) === String(classId) && f.studentId === currentUserId
   );
 
   if (isLoading) {

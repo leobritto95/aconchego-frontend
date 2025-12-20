@@ -1,4 +1,4 @@
-import { Check, X } from "lucide-react";
+import { Check, X, Clock } from "lucide-react";
 import { Feedback } from "../types";
 
 interface FeedbackStudentViewProps {
@@ -47,6 +47,8 @@ export function FeedbackStudentView({
             <td className="border border-slate-700">
               {feedback.status === "approved" ? (
                 <Check className="text-green-600 mx-auto" />
+              ) : feedback.status === "pending" ? (
+                <Clock className="text-yellow-600 mx-auto" />
               ) : (
                 <X className="text-red-600 mx-auto" />
               )}

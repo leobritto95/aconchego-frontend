@@ -23,7 +23,7 @@ export class NewsService {
   }
 
   static async searchNews(query: string) {
-    return apiRequest<News[]>('get', '/news/search', { query })
+    return apiRequest<News[]>('get', '/news/search', undefined, { query })
   }
 
   static async getLatestNews(limit: number = 5) {

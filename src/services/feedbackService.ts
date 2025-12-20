@@ -25,13 +25,15 @@ export class FeedbackService {
     if (classFilter) params.class = classFilter
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
-    if (userId) params.userId = userId
+    if (userId !== undefined && userId !== null) {
+      params.userId = String(userId)
+    }
 
     return apiRequest<PaginatedResponse<Feedback>>('get', '/feedback', undefined, params)
   }
 
-  static async getFeedbackById(id: number) {
-    return apiRequest<Feedback>('get', `/feedback/${id}`)
+  static async getFeedbackById(id: number | string) {
+    return apiRequest<Feedback>('get', `/feedback/${String(id)}`)
   }
 
   static async getGroupedClasses(style?: string, classFilter?: string, startDate?: string, endDate?: string) {
@@ -51,7 +53,7 @@ export class FeedbackService {
     startDate?: string,
     endDate?: string
   ) {
-    const params: any = { userId }
+    const params: any = { userId: String(userId) }
     if (style) params.style = style
     if (classFilter) params.class = classFilter
     if (startDate) params.startDate = startDate
@@ -60,20 +62,20 @@ export class FeedbackService {
     return apiRequest<GroupedClasses[]>('get', '/feedback/student/classes', undefined, params)
   }
 
-  static async getFeedbacksByClassId(classId: number) {
-    return apiRequest<Feedback[]>('get', `/feedback/class/${classId}`)
+  static async getFeedbacksByClassId(classId: number | string) {
+    return apiRequest<Feedback[]>('get', `/feedback/class/${String(classId)}`)
   }
 
   static async createFeedback(feedbackData: Omit<Feedback, 'id'>) {
     return apiRequest<Feedback>('post', '/feedback', feedbackData)
   }
 
-  static async updateFeedback(id: number, feedbackData: Partial<Feedback>) {
-    return apiRequest<Feedback>('put', `/feedback/${id}`, feedbackData)
+  static async updateFeedback(id: number | string, feedbackData: Partial<Feedback>) {
+    return apiRequest<Feedback>('put', `/feedback/${String(id)}`, feedbackData)
   }
 
-  static async deleteFeedback(id: number) {
-    return apiRequest<boolean>('delete', `/feedback/${id}`)
+  static async deleteFeedback(id: number | string) {
+    return apiRequest<boolean>('delete', `/feedback/${String(id)}`)
   }
 
   static async getFilterOptions() {

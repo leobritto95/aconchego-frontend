@@ -2,8 +2,8 @@ import { Textarea } from "@headlessui/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useFeedbackById } from "../hooks/useFeedback";
 import { useAuth } from "../hooks/useAuth";
+import { useUserById } from "../hooks/useUser";
 import { canViewFeedback, canViewAllFeedbacks } from "../utils/permissions";
-import { getStudentName } from "../services/studentUtils";
 
 export function FeedbackDetails() {
   const { feedbackId } = useParams();
@@ -11,7 +11,11 @@ export function FeedbackDetails() {
   const { user } = useAuth();
 
   const { feedback, isLoading, error } = useFeedbackById(
-    feedbackId ? parseInt(feedbackId) : 0
+    feedbackId || ""
+  );
+
+  const { user: studentUser, isLoading: isLoadingStudent } = useUserById(
+    feedback?.studentId
   );
 
   const handleRetry = () => {
@@ -22,7 +26,7 @@ export function FeedbackDetails() {
     navigate("/feedback");
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingStudent) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
@@ -80,6 +84,7 @@ export function FeedbackDetails() {
 
   const average = feedback.average;
   const isApproved = feedback.status === "approved";
+  const isPending = feedback.status === "pending";
   const isAdmin = user && canViewAllFeedbacks(user);
 
   return (
@@ -96,7 +101,7 @@ export function FeedbackDetails() {
               Informações do Aluno
             </h3>
             <p className="text-gray-600">
-              <strong>Nome:</strong> {getStudentName(feedback.studentId)}
+              <strong>Nome:</strong> {studentUser?.name || `Aluno ${feedback.studentId}`}
             </p>
             <p className="text-gray-600">
               <strong>Data:</strong>{" "}
@@ -108,13 +113,13 @@ export function FeedbackDetails() {
         <div className="w-full text-center h-full flex flex-col justify-center">
           <div className="w-96 m-4 text-center bg-gray-100 border border-gray-400 rounded-lg mx-auto pt-4 shadow-md">
             <h2 className="text-xl font-semibold pb-2">Média avaliadores</h2>
-            {feedback.parameters && (
-              <div className="flex flex-col">
-                <span>Parâmetro 1: {feedback.parameters.parameter1}</span>
-                <span>Parâmetro 2: {feedback.parameters.parameter2}</span>
-                <span>Parâmetro 3: {feedback.parameters.parameter3}</span>
-                <span>Parâmetro 4: {feedback.parameters.parameter4}</span>
-                <span>Parâmetro 5: {feedback.parameters.parameter5}</span>
+            {feedback.parameters && Object.entries(feedback.parameters).length > 0 && (
+              <div className="flex flex-col gap-1 px-4">
+                {Object.entries(feedback.parameters)
+                  .filter(([, value]) => value !== null && value !== undefined)
+                  .map(([key, param]) => (
+                    <span key={key}>{param.name}: {param.score}</span>
+                  ))}
               </div>
             )}
             <div className="pt-2">
@@ -123,10 +128,10 @@ export function FeedbackDetails() {
             <div className="pt-2">
               <span
                 className={`text-lg ${
-                  isApproved ? "text-green-600" : "text-red-600"
+                  isApproved ? "text-green-600" : isPending ? "text-yellow-600" : "text-red-600"
                 }`}
               >
-                Status: {isApproved ? "Aprovado" : "Reprovado"}
+                Status: {isApproved ? "Aprovado" : isPending ? "Pendente" : "Reprovado"}
               </span>
             </div>
             <div className="m-4 flex flex-col">

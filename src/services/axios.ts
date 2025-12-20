@@ -33,7 +33,6 @@ api.interceptors.response.use(
 
       switch (status) {
         case 401:
-          // Token expirado ou inválido
           localStorage.removeItem('token')
           localStorage.removeItem('user')
           window.location.href = '/login'
@@ -57,7 +56,6 @@ api.interceptors.response.use(
         status
       })
     } else if (error.request) {
-      // Erro de rede
       console.error('Erro de conexão:', error.message)
       return Promise.reject({
         success: false,
@@ -65,7 +63,6 @@ api.interceptors.response.use(
         status: 0
       })
     } else {
-      // Erro na configuração da requisição
       console.error('Erro na requisição:', error.message)
       return Promise.reject({
         success: false,
@@ -88,12 +85,12 @@ export const apiRequest = async <T>(
       url,
       data,
       params,
-    })
+    }) as any
 
     return {
-      success: true,
-      data: response.data,
-      message: (response as any).message || 'Operação realizada com sucesso'
+      success: response.success ?? true,
+      data: response.data as T,
+      message: response.message || 'Operação realizada com sucesso'
     }
   } catch (error: any) {
     return {

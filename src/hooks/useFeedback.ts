@@ -86,7 +86,7 @@ export function useStudentGroupedClasses(
   }
 }
 
-export function useFeedbacksByClassId(classId: number) {
+export function useFeedbacksByClassId(classId: number | string) {
   const { user } = useAuth()
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -106,7 +106,7 @@ export function useFeedbacksByClassId(classId: number) {
   }
 }
 
-export function useFeedbackById(id: number) {
+export function useFeedbackById(id: number | string) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['feedback', id],
     queryFn: () => FeedbackService.getFeedbackById(id),

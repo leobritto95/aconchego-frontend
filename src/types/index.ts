@@ -43,15 +43,9 @@ export interface Feedback {
   class: string;
   date: string;
   average: number;
-  status: 'approved' | 'rejected';
+  status: 'approved' | 'rejected' | 'pending';
   evaluatorFeedback?: string;
-  parameters?: {
-    parameter1: number;
-    parameter2: number;
-    parameter3: number;
-    parameter4: number;
-    parameter5: number;
-  };
+  parameters?: Record<string, { name: string; score: number }>;
 }
 
 // API Response types

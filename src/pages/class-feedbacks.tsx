@@ -1,14 +1,14 @@
-import { Check, X, ArrowLeft, Users, Calendar, Music } from "lucide-react";
+import { Check, X, Clock, ArrowLeft, Users, Calendar, Music } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useFeedbacksByClassId } from "../hooks/useFeedback";
-import { getStudentName } from "../services/studentUtils";
+import { StudentName } from "../components/student-name";
 
 export function ClassFeedbacks() {
   const navigate = useNavigate();
   const { classId } = useParams();
 
   const { feedbacks, isLoading, error, refetch } = useFeedbacksByClassId(
-    parseInt(classId || "0")
+    classId || ""
   );
 
   const getClassInfo = () => {
@@ -151,7 +151,7 @@ export function ClassFeedbacks() {
                   >
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">
-                        {getStudentName(feedback.studentId)}
+                        <StudentName studentId={feedback.studentId} />
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -163,6 +163,10 @@ export function ClassFeedbacks() {
                       {feedback.status === "approved" ? (
                         <div className="flex items-center justify-center">
                           <Check className="w-5 h-5 text-green-600" />
+                        </div>
+                      ) : feedback.status === "pending" ? (
+                        <div className="flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-yellow-600" />
                         </div>
                       ) : (
                         <div className="flex items-center justify-center">
