@@ -7,6 +7,7 @@ import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/core";
 import { MobileDateStrip } from "./MobileDateStrip";
 import { useEvents } from "../hooks/useEvents";
+import { CALENDAR_COLORS } from "../constants/calendarColors";
 
 interface UserData {
   id: number;
@@ -165,11 +166,13 @@ export function Calendar() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const { events, isLoading, error, refetch } = useEvents();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const userData: UserData = JSON.parse(storedUser);
+      setUserRole(userData.role);
       setCanManageEvents(hasEventManagementPermission(userData.role));
     }
   }, []);
@@ -359,6 +362,69 @@ export function Calendar() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+        {/* Legenda de cores */}
+        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className="text-gray-600 font-medium">Legenda:</span>
+            {userRole === 'student' ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{
+                      backgroundColor: CALENDAR_COLORS.enrolled.backgroundColor,
+                      border: `1px solid ${CALENDAR_COLORS.enrolled.borderColor}`,
+                    }}
+                  ></div>
+                  <span className="text-gray-700">{CALENDAR_COLORS.enrolled.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{
+                      backgroundColor: CALENDAR_COLORS.notEnrolled.backgroundColor,
+                      border: `1px solid ${CALENDAR_COLORS.notEnrolled.borderColor}`,
+                    }}
+                  ></div>
+                  <span className="text-gray-700">{CALENDAR_COLORS.notEnrolled.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{
+                      backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
+                      border: `1px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
+                    }}
+                  ></div>
+                  <span className="text-gray-700">{CALENDAR_COLORS.singleEvent.label}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{
+                      backgroundColor: CALENDAR_COLORS.classDefault.backgroundColor,
+                      border: `1px solid ${CALENDAR_COLORS.classDefault.borderColor}`,
+                    }}
+                  ></div>
+                  <span className="text-gray-700">{CALENDAR_COLORS.classDefault.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{
+                      backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
+                      border: `1px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
+                    }}
+                  ></div>
+                  <span className="text-gray-700">{CALENDAR_COLORS.singleEvent.label}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <MobileDateStrip

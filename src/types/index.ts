@@ -18,7 +18,6 @@ export interface Class {
   style?: string;
   description?: string;
   teacherId?: string;
-  // Campos de recorrência (todas as classes usam o mesmo sistema)
   active?: boolean;
   recurringDays: number[]; // [2, 3] = terça e quarta
   scheduleTimes: Record<string, ScheduleTime>; // { "2": { startTime: "19:00", endTime: "21:00" }, ... }
@@ -40,6 +39,7 @@ export interface Event {
   extendedProps?: {
     type: 'recurring-class' | 'single-event';
     classId?: string;
+    isEnrolled?: boolean; // Se o aluno está matriculado (apenas para classes)
   };
 }
 
