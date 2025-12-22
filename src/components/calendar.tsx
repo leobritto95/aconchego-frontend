@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -23,8 +23,130 @@ interface EventModalProps {
   canManageEvents?: boolean;
 }
 
+// Constantes
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+};
+
+const TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  ...DATE_FORMAT_OPTIONS,
+  ...TIME_FORMAT_OPTIONS,
+};
+
+const LOCALE = "pt-BR";
+const MOBILE_BREAKPOINT = 768;
+const EVENT_MANAGEMENT_ROLES = ["teacher", "secretary", "admin"] as const;
+
+// Funções utilitárias
 function hasEventManagementPermission(role: string): boolean {
-  return ["teacher", "secretary", "admin"].includes(role);
+  return EVENT_MANAGEMENT_ROLES.includes(role as typeof EVENT_MANAGEMENT_ROLES[number]);
+}
+
+function isSameDay(date1: Date, date2: Date): boolean {
+  return date1.toDateString() === date2.toDateString();
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString(LOCALE, DATE_FORMAT_OPTIONS);
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString(LOCALE, TIME_FORMAT_OPTIONS);
+}
+
+function formatDateTime(date: Date): string {
+  return date.toLocaleString(LOCALE, DATE_TIME_FORMAT_OPTIONS);
+}
+
+function getEventDescription(event: EventClickArg["event"]): string | null {
+  return event.extendedProps?.description || 
+    ('description' in event && typeof (event as { description?: string }).description === 'string' 
+      ? (event as { description: string }).description 
+      : null);
+}
+
+// Componentes auxiliares
+interface TimeCardProps {
+  label: string;
+  value: string;
+  icon: "calendar" | "start" | "end";
+}
+
+function TimeCard({ label, value, icon }: TimeCardProps) {
+  const iconConfig = {
+    calendar: {
+      bg: "bg-gray-100",
+      color: "text-gray-600",
+      svg: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      ),
+    },
+    start: {
+      bg: "bg-green-100",
+      color: "text-green-700",
+      svg: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+      ),
+    },
+    end: {
+      bg: "bg-red-100",
+      color: "text-red-700",
+      svg: (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      ),
+    },
+  };
+
+  const config = iconConfig[icon];
+
+  return (
+    <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
+      <div className={`flex items-center justify-center w-6 h-6 ${config.bg} rounded-md flex-shrink-0`}>
+        <svg className={`w-3 h-3 ${config.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {config.svg}
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+        <p className="text-sm text-gray-900 font-semibold">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+interface EventScheduleProps {
+  start: Date;
+  end: Date;
+}
+
+function EventSchedule({ start, end }: EventScheduleProps) {
+  const sameDay = isSameDay(start, end);
+
+  if (sameDay) {
+    return (
+      <div className="space-y-2">
+        <TimeCard label="Data" value={formatDate(start)} icon="calendar" />
+        <div className="grid grid-cols-2 gap-2">
+          <TimeCard label="Início" value={formatTime(start)} icon="start" />
+          <TimeCard label="Fim" value={formatTime(end)} icon="end" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <TimeCard label="Início" value={formatDateTime(start)} icon="start" />
+      <TimeCard label="Fim" value={formatDateTime(end)} icon="end" />
+    </div>
+  );
 }
 
 function EventModal({
@@ -33,6 +155,8 @@ function EventModal({
   event,
   canManageEvents = false,
 }: EventModalProps) {
+  const description = useMemo(() => event ? getEventDescription(event) : null, [event]);
+
   if (!isOpen) return null;
 
   return (
@@ -82,125 +206,24 @@ function EventModal({
                 </svg>
                 Horário
               </h4>
-              {event.start && event.end && 
-                event.start.toDateString() === event.end.toDateString() ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
-                    <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded-md">
-                      <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-500 mb-0.5">Data</p>
-                      <p className="text-sm text-gray-900 font-semibold">
-                        {event.start.toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
-                      <div className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-md flex-shrink-0">
-                        <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-500 mb-0.5">Início</p>
-                        <p className="text-sm text-gray-900 font-semibold">
-                          {event.start.toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
-                      <div className="flex items-center justify-center w-6 h-6 bg-red-100 rounded-md flex-shrink-0">
-                        <svg className="w-3 h-3 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-500 mb-0.5">Fim</p>
-                        <p className="text-sm text-gray-900 font-semibold">
-                          {event.end.toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
-                    <div className="flex items-center justify-center w-6 h-6 bg-green-100 rounded-md flex-shrink-0">
-                      <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 mb-0.5">Início</p>
-                      <p className="text-sm text-gray-900 font-semibold">
-                        {event.start?.toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
-                    <div className="flex items-center justify-center w-6 h-6 bg-red-100 rounded-md flex-shrink-0">
-                      <svg className="w-3 h-3 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 mb-0.5">Fim</p>
-                      <p className="text-sm text-gray-900 font-semibold">
-                        {event.end?.toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              {event.start && event.end && (
+                <EventSchedule start={event.start} end={event.end} />
               )}
             </div>
 
-            {/* Descrição */}
-            {(() => {
-              const description = event.extendedProps?.description || 
-                ('description' in event && typeof (event as { description?: string }).description === 'string' 
-                  ? (event as { description: string }).description 
-                  : null);
-              return description ? (
-                <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200">
-                  <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Descrição
-                  </h4>
-                  <p className="text-sm text-gray-700 leading-relaxed bg-white/70 rounded-lg px-3 py-2.5 border border-gray-100">
-                    {description}
-                  </p>
-                </div>
-              ) : null;
-            })()}
+            {description && (
+              <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Descrição
+                </h4>
+                <p className="text-sm text-gray-700 leading-relaxed bg-white/70 rounded-lg px-3 py-2.5 border border-gray-100">
+                  {description}
+                </p>
+              </div>
+            )}
 
             {canManageEvents && (
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
@@ -285,6 +308,61 @@ function EventModal({
   );
 }
 
+// Componente de Legenda
+interface LegendItemProps {
+  color: typeof CALENDAR_COLORS[keyof typeof CALENDAR_COLORS];
+}
+
+function LegendItem({ color }: LegendItemProps) {
+  return (
+    <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
+      <div
+        className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
+        style={{
+          backgroundColor: color.backgroundColor,
+          border: `2px solid ${color.borderColor}`,
+        }}
+      />
+      <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">
+        {color.label}
+      </span>
+    </div>
+  );
+}
+
+interface CalendarLegendProps {
+  userRole: string | null;
+}
+
+function CalendarLegend({ userRole }: CalendarLegendProps) {
+  const legendItems = useMemo(() => {
+    if (userRole === 'student') {
+      return [
+        CALENDAR_COLORS.enrolled,
+        CALENDAR_COLORS.notEnrolled,
+        CALENDAR_COLORS.singleEvent,
+      ];
+    }
+    return [
+      CALENDAR_COLORS.classDefault,
+      CALENDAR_COLORS.singleEvent,
+    ];
+  }, [userRole]);
+
+  return (
+    <div className="px-3 sm:px-6 py-2 sm:py-2.5 bg-white border-b border-gray-200">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
+        <span className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">
+          Legenda:
+        </span>
+        {legendItems.map((color, index) => (
+          <LegendItem key={index} color={color} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<
     EventClickArg["event"] | null
@@ -314,9 +392,78 @@ export function Calendar() {
     }
   }, []);
 
+  // Callbacks memoizados
+  const goToToday = useCallback(() => {
+    const today = new Date();
+    setSelectedDate(today);
+    if (calendarRef) {
+      calendarRef.getApi().gotoDate(today);
+    }
+  }, [calendarRef]);
+
+  const navigatePrev = useCallback(() => {
+    if (calendarRef) {
+      calendarRef.getApi().prev();
+      setSelectedDate(calendarRef.getApi().getDate());
+    }
+  }, [calendarRef]);
+
+  const navigateNext = useCallback(() => {
+    if (calendarRef) {
+      calendarRef.getApi().next();
+      setSelectedDate(calendarRef.getApi().getDate());
+    }
+  }, [calendarRef]);
+
+  const handleDateFilter = useCallback((date: string) => {
+    if (!date) return;
+    const d = new Date(date);
+    setSelectedDate(d);
+    if (calendarRef) {
+      calendarRef.getApi().gotoDate(d);
+    }
+  }, [calendarRef]);
+
+  const handleDatesSet = useCallback((arg: DatesSetArg) => {
+    setDateRange({
+      start: arg.start.toISOString(),
+      end: arg.end.toISOString(),
+    });
+    
+    if (isMobile) {
+      setSelectedDate(arg.start);
+    }
+  }, [isMobile]);
+
+  const handleEventClick = useCallback((info: EventClickArg) => {
+    setSelectedEvent(info.event);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleDateSelect = useCallback((selectInfo: DateSelectArg) => {
+    if (!canManageEvents) return;
+    setSelectedEvent(null);
+    setIsModalOpen(true);
+    // selectInfo contém informações sobre a seleção (start, end, etc.)
+    // Pode ser usado no futuro para pré-preencher o formulário
+    void selectInfo;
+  }, [canManageEvents]);
+
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const handleMobileDateChange = useCallback((date: Date) => {
+    setSelectedDate(date);
+    if (calendarRef) {
+      calendarRef.getApi().gotoDate(date);
+    }
+  }, [calendarRef]);
+
+  // Responsividade
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
       setIsMobile(mobile);
       if (calendarRef) {
         calendarRef
@@ -329,43 +476,6 @@ export function Calendar() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, [calendarRef, selectedDate]);
-
-  const handleDatesSet = (arg: DatesSetArg) => {
-    setDateRange({
-      start: arg.start.toISOString(),
-      end: arg.end.toISOString(),
-    });
-    
-    if (isMobile) {
-      setSelectedDate(arg.start);
-    }
-  };
-
-  const handleDateFilter = (date: string) => {
-    if (!date) return;
-    const d = new Date(date);
-    setSelectedDate(d);
-    if (calendarRef) {
-      calendarRef.getApi().gotoDate(d);
-    }
-  };
-
-  const handleEventClick = (info: EventClickArg) => {
-    setSelectedEvent(info.event);
-    setIsModalOpen(true);
-  };
-
-  const handleDateSelect = (selectInfo: DateSelectArg) => {
-    if (canManageEvents) {
-      setSelectedEvent(null);
-      setIsModalOpen(true);
-      console.log("Data selecionada:", selectInfo.start, "até", selectInfo.end);
-    }
-  };
-
-  const handleRetry = () => {
-    refetch();
-  };
 
   if (isLoading) {
     return (
@@ -410,12 +520,7 @@ export function Calendar() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
               <button
-                onClick={() => {
-                  setSelectedDate(new Date());
-                  if (calendarRef) {
-                    calendarRef.getApi().gotoDate(new Date());
-                  }
-                }}
+                onClick={goToToday}
                 className="flex items-center gap-1.5 text-xs text-amber-900 hover:text-amber-800 font-bold bg-white/60 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm hover:shadow-md hover:shadow-amber-200/50 transition-all duration-200 hover:bg-white hover:scale-105 hover:border hover:border-amber-300 active:scale-95"
               >
                 <svg
@@ -436,12 +541,7 @@ export function Calendar() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  if (calendarRef) {
-                    calendarRef.getApi().prev();
-                    setSelectedDate(calendarRef.getApi().getDate());
-                  }
-                }}
+                onClick={navigatePrev}
                 className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-2 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
                 aria-label="Anterior"
               >
@@ -466,12 +566,7 @@ export function Calendar() {
                 </svg>
               </div>
               <button
-                onClick={() => {
-                  if (calendarRef) {
-                    calendarRef.getApi().next();
-                    setSelectedDate(calendarRef.getApi().getDate());
-                  }
-                }}
+                onClick={navigateNext}
                 className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-2 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
                 aria-label="Próximo"
               >
@@ -498,12 +593,7 @@ export function Calendar() {
               {/* Setas de navegação */}
               <div className="flex flex-row gap-1 items-center bg-white/70 backdrop-blur-sm rounded-lg p-1 shadow-md border border-amber-100/50">
                 <button
-                  onClick={() => {
-                    if (calendarRef) {
-                      calendarRef.getApi().prev();
-                      setSelectedDate(calendarRef.getApi().getDate());
-                    }
-                  }}
+                  onClick={navigatePrev}
                   className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 cursor-pointer rounded-md shadow-sm hover:shadow-md transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-amber-300 p-2.5"
                   aria-label="Período anterior"
                 >
@@ -522,12 +612,7 @@ export function Calendar() {
                   </svg>
                 </button>
                 <button
-                  onClick={() => {
-                    if (calendarRef) {
-                      calendarRef.getApi().next();
-                      setSelectedDate(calendarRef.getApi().getDate());
-                    }
-                  }}
+                  onClick={navigateNext}
                   className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 cursor-pointer rounded-md shadow-sm hover:shadow-md transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-amber-300 p-2.5"
                   aria-label="Próximo período"
                 >
@@ -569,12 +654,7 @@ export function Calendar() {
               </div>
               {selectedDate && (
                 <button
-                  onClick={() => {
-                    setSelectedDate(new Date());
-                    if (calendarRef) {
-                      calendarRef.getApi().gotoDate(new Date());
-                    }
-                  }}
+                  onClick={goToToday}
                   className="text-sm text-amber-900 hover:text-amber-800 font-bold flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:shadow-amber-200/50 transition-all duration-200 hover:bg-white hover:scale-105 hover:border hover:border-amber-300 active:scale-95"
                 >
                   <svg
@@ -596,77 +676,10 @@ export function Calendar() {
             </div>
           </div>
         </div>
-        {/* Legenda de cores */}
-        <div className="px-3 sm:px-6 py-2 sm:py-2.5 bg-white border-b border-gray-200">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
-            <span className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">Legenda:</span>
-            {userRole === 'student' ? (
-              <>
-                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
-                  <div
-                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor: CALENDAR_COLORS.enrolled.backgroundColor,
-                      border: `2px solid ${CALENDAR_COLORS.enrolled.borderColor}`,
-                    }}
-                  ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.enrolled.label}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
-                  <div
-                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor: CALENDAR_COLORS.notEnrolled.backgroundColor,
-                      border: `2px solid ${CALENDAR_COLORS.notEnrolled.borderColor}`,
-                    }}
-                  ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.notEnrolled.label}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
-                  <div
-                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
-                      border: `2px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
-                    }}
-                  ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
-                  <div
-                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor: CALENDAR_COLORS.classDefault.backgroundColor,
-                      border: `2px solid ${CALENDAR_COLORS.classDefault.borderColor}`,
-                    }}
-                  ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.classDefault.label}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
-                  <div
-                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
-                      border: `2px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
-                    }}
-                  ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <CalendarLegend userRole={userRole} />
         <MobileDateStrip
           selectedDate={selectedDate}
-          onChange={(date) => {
-            setSelectedDate(date);
-            if (calendarRef) {
-              calendarRef.getApi().gotoDate(date);
-            }
-          }}
+          onChange={handleMobileDateChange}
         />
         <div className="flex-1 p-2 sm:p-6 overflow-auto">
           <style>{`
