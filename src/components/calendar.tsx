@@ -315,15 +315,15 @@ interface LegendItemProps {
 
 function LegendItem({ color }: LegendItemProps) {
   return (
-    <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
+    <div className="flex items-center gap-1 bg-gray-50 px-1.5 sm:px-2.5 py-0.5 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
       <div
-        className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
+        className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded flex-shrink-0 shadow-sm"
         style={{
           backgroundColor: color.backgroundColor,
           border: `2px solid ${color.borderColor}`,
         }}
       />
-      <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">
+      <span className="text-gray-700 font-medium text-[9px] sm:text-xs whitespace-nowrap">
         {color.label}
       </span>
     </div>
@@ -350,9 +350,9 @@ function CalendarLegend({ userRole }: CalendarLegendProps) {
   }, [userRole]);
 
   return (
-    <div className="px-3 sm:px-6 py-2 sm:py-2.5 bg-white border-b border-gray-200">
-      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
-        <span className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">
+    <div className="px-2 sm:px-6 py-1.5 sm:py-2.5 bg-white border-b border-gray-200">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm">
+        <span className="text-gray-600 font-semibold text-[9px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">
           Legenda:
         </span>
         {legendItems.map((color, index) => (
@@ -543,24 +543,24 @@ export function Calendar() {
     <div className="flex-1 flex flex-col pb-20">
       <div className="flex-1 flex flex-col bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
         {/* Header */}
-        <div className="p-3 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-50/90 via-amber-50 to-amber-50/90 shadow-sm">
+        <div className="p-2.5 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-50/90 via-amber-50 to-amber-50/90 shadow-sm">
           {/* Mobile: Layout Simplificado */}
           <div className="sm:hidden">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-              <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-amber-900 drop-shadow-sm truncate">Agenda</h2>
                 {todayEventsCount > 0 && (
-                  <p className="text-[10px] text-amber-700 font-medium mt-0.5">
+                  <p className="text-[9px] text-amber-700 font-medium mt-0.5 truncate">
                     {todayEventsCount} {todayEventsCount === 1 ? "evento hoje" : "eventos hoje"}
                   </p>
                 )}
               </div>
               <button
                 onClick={goToToday}
-                className="flex items-center gap-1.5 text-xs text-amber-900 hover:text-amber-800 font-bold bg-white/60 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm hover:shadow-md hover:shadow-amber-200/50 transition-all duration-200 hover:bg-white hover:scale-105 hover:border hover:border-amber-300 active:scale-95"
+                className="flex items-center gap-1 text-[10px] text-amber-900 hover:text-amber-800 font-bold bg-white/80 backdrop-blur-sm px-2.5 py-1.5 rounded-md shadow-sm hover:shadow-md transition-all duration-200 hover:bg-white active:scale-95 flex-shrink-0 ml-2"
               >
                 <svg
-                  className="w-3.5 h-3.5"
+                  className="w-3 h-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -572,28 +572,28 @@ export function Calendar() {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                Hoje
+                <span>Hoje</span>
               </button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={navigatePrev}
-                className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-2 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-1.5 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 flex-shrink-0"
                 aria-label="Anterior"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-0">
                 <input
                   type="date"
                   value={selectedDate.toISOString().slice(0, 10)}
                   onChange={(e) => handleDateFilter(e.target.value)}
-                  className="block w-full rounded-lg border-amber-300 shadow-sm focus:border-amber-600 focus:ring-2 focus:ring-amber-300 text-sm bg-white px-3 py-2 pl-9 font-medium transition-all duration-200 hover:border-amber-400"
+                  className="block w-full rounded-lg border-amber-300 shadow-sm focus:border-amber-600 focus:ring-2 focus:ring-amber-300 text-xs bg-white px-2.5 py-2 pl-8 font-medium transition-all duration-200 hover:border-amber-400"
                 />
                 <svg
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-amber-600 pointer-events-none"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -603,10 +603,10 @@ export function Calendar() {
               </div>
               <button
                 onClick={navigateNext}
-                className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-2 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                className="bg-amber-900 text-white hover:bg-amber-800 active:scale-95 rounded-lg p-1.5 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300 flex-shrink-0"
                 aria-label="Próximo"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -724,7 +724,7 @@ export function Calendar() {
           selectedDate={selectedDate}
           onChange={handleMobileDateChange}
         />
-        <div className="flex-1 p-2 sm:p-6 overflow-auto relative">
+        <div className="flex-1 p-1.5 sm:p-6 overflow-auto relative overscroll-contain touch-pan-y">
           {/* Loading overlay sutil durante atualizações */}
           {isFetching && !isLoading && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-opacity duration-200">
@@ -871,36 +871,80 @@ export function Calendar() {
             }
             @media (max-width: 768px) {
               .fc-col-header-cell {
-                padding: 8px 4px;
-                font-size: 0.7rem;
-                font-weight: 600;
+                padding: 10px 6px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
               }
               .fc-timegrid-slot {
-                height: 2.2em;
+                height: 2.5em;
+                min-height: 2.5em;
               }
               .fc-timegrid-slot-label {
-                font-size: 0.65rem;
-                padding: 2px 4px;
-              }
-              .fc-event {
                 font-size: 0.7rem;
-                padding: 2px 4px;
-                border-radius: 4px;
+                padding: 4px 6px;
                 font-weight: 600;
               }
+              .fc-timegrid-slot-label-cushion {
+                padding-right: 4px;
+              }
+              .fc-event {
+                font-size: 0.75rem;
+                padding: 5px 7px;
+                border-radius: 6px;
+                font-weight: 600;
+                margin: 2px 3px;
+                min-height: 26px;
+                display: flex;
+                align-items: center;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+              }
+              .fc-event:active {
+                opacity: 0.8;
+                transform: scale(0.98);
+              }
               .fc-event-title {
-                font-size: 0.7rem;
-                line-height: 1.2;
+                font-size: 0.75rem;
+                line-height: 1.3;
                 color: #000000 !important;
+                font-weight: 700;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
               }
               .fc-event-time {
-                font-size: 0.65rem;
+                font-size: 0.7rem;
                 color: #000000 !important;
+                font-weight: 700;
+                margin-right: 4px;
+                flex-shrink: 0;
               }
               .fc-day-today .fc-daygrid-day-number {
-                width: 24px;
-                height: 24px;
-                font-size: 0.75rem;
+                width: 26px;
+                height: 26px;
+                font-size: 0.8rem;
+              }
+              .fc-timegrid-col-frame {
+                padding-right: 3px;
+              }
+              .fc-scrollgrid-sync-inner {
+                padding: 3px;
+              }
+              .fc-timegrid-event-harness {
+                margin: 2px 0;
+              }
+              .fc-timegrid-col {
+                min-width: 0;
+              }
+              .fc-scrollgrid {
+                -webkit-overflow-scrolling: touch;
+              }
+              .fc-more-link {
+                font-size: 0.7rem;
+                padding: 3px 6px;
+                margin-top: 2px;
               }
             }
           `}</style>
