@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -377,11 +377,12 @@ export function Calendar() {
     null
   );
 
-  const { events, isLoading, error, refetch } = useEvents(
+  const { events, isLoading, isFetching, error, refetch } = useEvents(
     dateRange?.start,
     dateRange?.end
   );
   const [userRole, setUserRole] = useState<string | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Contar eventos de hoje
   const todayEventsCount = useMemo(() => {
@@ -436,15 +437,31 @@ export function Calendar() {
   }, [calendarRef]);
 
   const handleDatesSet = useCallback((arg: DatesSetArg) => {
-    setDateRange({
-      start: arg.start.toISOString(),
-      end: arg.end.toISOString(),
-    });
-    
-    if (isMobile) {
-      setSelectedDate(arg.start);
+    // Debounce para evitar múltiplas requisições rápidas
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDateRange({
+        start: arg.start.toISOString(),
+        end: arg.end.toISOString(),
+      });
+      
+      if (isMobile) {
+        setSelectedDate(arg.start);
+      }
+    }, 150); // 150ms de debounce para transições mais suaves
   }, [isMobile]);
+
+  // Cleanup do debounce
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleEventClick = useCallback((info: EventClickArg) => {
     setSelectedEvent(info.event);
@@ -488,7 +505,8 @@ export function Calendar() {
     return () => window.removeEventListener("resize", checkMobile);
   }, [calendarRef, selectedDate]);
 
-  if (isLoading) {
+  // Loading inicial (primeira vez)
+  if (isLoading && !dateRange) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-amber-50 to-white">
         <div className="text-center">
@@ -530,7 +548,7 @@ export function Calendar() {
           <div className="sm:hidden">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
+              <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
                 {todayEventsCount > 0 && (
                   <p className="text-[10px] text-amber-700 font-medium mt-0.5">
                     {todayEventsCount} {todayEventsCount === 1 ? "evento hoje" : "eventos hoje"}
@@ -604,9 +622,9 @@ export function Calendar() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-amber-900 drop-shadow-sm tracking-tight">
-                  Agenda
-                </h2>
+              <h2 className="text-3xl font-bold text-amber-900 drop-shadow-sm tracking-tight">
+                Agenda
+              </h2>
                 {todayEventsCount > 0 && (
                   <p className="text-xs text-amber-700 font-medium mt-0.5">
                     {todayEventsCount} {todayEventsCount === 1 ? "evento hoje" : "eventos hoje"}
@@ -706,7 +724,16 @@ export function Calendar() {
           selectedDate={selectedDate}
           onChange={handleMobileDateChange}
         />
-        <div className="flex-1 p-2 sm:p-6 overflow-auto">
+        <div className="flex-1 p-2 sm:p-6 overflow-auto relative">
+          {/* Loading overlay sutil durante atualizações */}
+          {isFetching && !isLoading && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-200 border-t-amber-600"></div>
+                <p className="text-xs text-gray-600 font-medium">Atualizando eventos...</p>
+              </div>
+            </div>
+          )}
           <style>{`
             .fc {
               font-family: inherit;
@@ -918,12 +945,18 @@ export function Calendar() {
             moreLinkContent={(args) => `+${args.num} mais`}
             contentHeight="auto"
             aspectRatio={1.35}
+            lazyFetching={true}
+            eventDisplay="block"
             views={{
               timeGridDay: {
                 titleFormat: { year: "numeric", month: "long", day: "numeric" },
+                slotMinTime: "06:00:00",
+                slotMaxTime: "22:00:00",
               },
               timeGridWeek: {
                 titleFormat: { year: "numeric", month: "long" },
+                slotMinTime: "06:00:00",
+                slotMaxTime: "22:00:00",
               },
             }}
             eventDidMount={(info) => {
