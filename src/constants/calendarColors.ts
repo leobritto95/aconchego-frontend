@@ -11,14 +11,14 @@ export const CALENDAR_COLORS = {
     label: 'Aula matriculada',
   },
   notEnrolled: {
-    backgroundColor: '#f59e0b',
-    borderColor: '#d97706',
+    backgroundColor: '#c4b5fd',
+    borderColor: '#a78bfa',
     label: 'Aula disponível',
   },
   // Para professores/admins (todas as classes aparecem nesta cor)
   classDefault: {
-    backgroundColor: '#10b981',
-    borderColor: '#059669',
+    backgroundColor: '#c4b5fd',
+    borderColor: '#a78bfa',
     label: 'Aulas/Classes',
   },
   // Eventos únicos
