@@ -383,6 +383,17 @@ export function Calendar() {
   );
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Contar eventos de hoje
+  const todayEventsCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return events.filter((event) => {
+      const eventDate = new Date(event.start);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate.getTime() === today.getTime();
+    }).length;
+  }, [events]);
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -518,7 +529,14 @@ export function Calendar() {
           {/* Mobile: Layout Simplificado */}
           <div className="sm:hidden">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
+              <div>
+                <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm">Agenda</h2>
+                {todayEventsCount > 0 && (
+                  <p className="text-[10px] text-amber-700 font-medium mt-0.5">
+                    {todayEventsCount} {todayEventsCount === 1 ? "evento hoje" : "eventos hoje"}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={goToToday}
                 className="flex items-center gap-1.5 text-xs text-amber-900 hover:text-amber-800 font-bold bg-white/60 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm hover:shadow-md hover:shadow-amber-200/50 transition-all duration-200 hover:bg-white hover:scale-105 hover:border hover:border-amber-300 active:scale-95"
@@ -585,9 +603,16 @@ export function Calendar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-amber-900 drop-shadow-sm tracking-tight">
-                Agenda
-              </h2>
+              <div>
+                <h2 className="text-3xl font-bold text-amber-900 drop-shadow-sm tracking-tight">
+                  Agenda
+                </h2>
+                {todayEventsCount > 0 && (
+                  <p className="text-xs text-amber-700 font-medium mt-0.5">
+                    {todayEventsCount} {todayEventsCount === 1 ? "evento hoje" : "eventos hoje"}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {/* Setas de navegação */}
@@ -900,6 +925,15 @@ export function Calendar() {
               timeGridWeek: {
                 titleFormat: { year: "numeric", month: "long" },
               },
+            }}
+            eventDidMount={(info) => {
+              // Tooltip automático com descrição
+              const description = getEventDescription(info.event);
+              
+              if (description) {
+                info.el.setAttribute("title", description);
+                info.el.setAttribute("data-tooltip", description);
+              }
             }}
             datesSet={handleDatesSet}
           />
