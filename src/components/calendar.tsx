@@ -404,7 +404,7 @@ export function Calendar() {
     <div className="flex-1 flex flex-col pb-20">
       <div className="flex-1 flex flex-col bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
         {/* Header */}
-        <div className="p-3 sm:p-6 border-b border-amber-200/60 bg-gradient-to-r from-amber-50 via-amber-100/80 to-amber-50 shadow-sm">
+        <div className="p-3 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-50/90 via-amber-50 to-amber-50/90 shadow-sm">
           {/* Mobile: Layout Simplificado */}
           <div className="sm:hidden">
             <div className="flex items-center justify-between mb-3">
@@ -597,63 +597,63 @@ export function Calendar() {
           </div>
         </div>
         {/* Legenda de cores */}
-        <div className="px-3 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-gray-50 via-gray-100/30 to-gray-50 border-b border-gray-200">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
-            <span className="text-gray-700 font-semibold text-[10px] sm:text-sm uppercase tracking-wide hidden sm:inline">Legenda:</span>
+        <div className="px-3 sm:px-6 py-2 sm:py-2.5 bg-white border-b border-gray-200">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
+            <span className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">Legenda:</span>
             {userRole === 'student' ? (
               <>
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-default">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm flex-shrink-0 ring-1 ring-gray-100"
+                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: CALENDAR_COLORS.enrolled.backgroundColor,
                       border: `2px solid ${CALENDAR_COLORS.enrolled.borderColor}`,
                     }}
                   ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-sm whitespace-nowrap">{CALENDAR_COLORS.enrolled.label}</span>
+                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.enrolled.label}</span>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-default">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm flex-shrink-0 ring-1 ring-gray-100"
+                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: CALENDAR_COLORS.notEnrolled.backgroundColor,
                       border: `2px solid ${CALENDAR_COLORS.notEnrolled.borderColor}`,
                     }}
                   ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-sm whitespace-nowrap">{CALENDAR_COLORS.notEnrolled.label}</span>
+                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.notEnrolled.label}</span>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-default">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm flex-shrink-0 ring-1 ring-gray-100"
+                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
                       border: `2px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
                     }}
                   ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-sm whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
+                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
                 </div>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-default">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm flex-shrink-0 ring-1 ring-gray-100"
+                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: CALENDAR_COLORS.classDefault.backgroundColor,
                       border: `2px solid ${CALENDAR_COLORS.classDefault.borderColor}`,
                     }}
                   ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-sm whitespace-nowrap">{CALENDAR_COLORS.classDefault.label}</span>
+                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.classDefault.label}</span>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-default">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors duration-150 cursor-default">
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded shadow-sm flex-shrink-0 ring-1 ring-gray-100"
+                    className="w-3 h-3 rounded flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor: CALENDAR_COLORS.singleEvent.backgroundColor,
                       border: `2px solid ${CALENDAR_COLORS.singleEvent.borderColor}`,
                     }}
                   ></div>
-                  <span className="text-gray-700 font-medium text-[10px] sm:text-sm whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
+                  <span className="text-gray-700 font-medium text-[10px] sm:text-xs whitespace-nowrap">{CALENDAR_COLORS.singleEvent.label}</span>
                 </div>
               </>
             )}
@@ -677,12 +677,23 @@ export function Calendar() {
               border-color: #e5e7eb;
             }
             .fc-col-header-cell {
-              background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
+              background: linear-gradient(to bottom, #ffffff, #f9fafb);
               padding: 12px 8px;
               font-weight: 600;
               font-size: 0.875rem;
               color: #111827;
               border-bottom: 2px solid #e5e7eb;
+              text-transform: capitalize;
+            }
+            .fc-day-today {
+              background-color: #fffbeb !important;
+            }
+            .fc-day-today .fc-col-header-cell-cushion {
+              color: #92400e;
+              font-weight: 700;
+            }
+            .fc-timegrid-col.fc-day-today {
+              background-color: #fffbeb;
             }
             .fc-timegrid-slot {
               height: 3em;
@@ -694,28 +705,32 @@ export function Calendar() {
               font-weight: 500;
               padding: 4px 8px;
             }
+            .fc-timegrid-slot-minor {
+              border-color: #f9fafb;
+            }
             .fc-event {
               border-radius: 6px;
               border-width: 2px;
-              padding: 2px 4px;
+              padding: 3px 6px;
               font-weight: 500;
               font-size: 0.8125rem;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
               transition: all 0.2s ease;
+              cursor: pointer;
             }
             .fc-event:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
               z-index: 10;
             }
             .fc-event-title {
               font-weight: 600;
-              line-height: 1.3;
+              line-height: 1.4;
               color: #000000 !important;
             }
             .fc-event-time {
               font-weight: 600;
-              opacity: 0.9;
+              opacity: 0.95;
               color: #000000 !important;
             }
             .fc-daygrid-day-number {
@@ -723,10 +738,26 @@ export function Calendar() {
               color: #374151;
               padding: 8px;
             }
+            .fc-day-today .fc-daygrid-day-number {
+              background-color: #fbbf24;
+              color: #78350f;
+              border-radius: 50%;
+              width: 28px;
+              height: 28px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 700;
+            }
             .fc-timegrid-now-indicator-line {
               border-color: #ef4444;
               border-width: 2px;
-              opacity: 0.8;
+              opacity: 0.9;
+              box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+            }
+            .fc-timegrid-now-indicator-arrow {
+              border-color: #ef4444;
+              border-width: 0 6px 6px 6px;
             }
             .fc-button {
               background-color: #92400e;
@@ -753,9 +784,29 @@ export function Calendar() {
               background-color: #d97706;
               border-color: #d97706;
             }
+            .fc-scrollgrid {
+              border-color: #e5e7eb;
+            }
+            .fc-scrollgrid-section-header > td {
+              border-color: #e5e7eb;
+            }
+            .fc-timegrid-col-frame {
+              border-right-color: #e5e7eb;
+            }
+            .fc-more-link {
+              font-weight: 600;
+              color: #92400e;
+              padding: 2px 6px;
+              border-radius: 4px;
+              transition: all 0.2s;
+            }
+            .fc-more-link:hover {
+              background-color: #fffbeb;
+              color: #78350f;
+            }
             @media (max-width: 768px) {
               .fc-col-header-cell {
-                padding: 6px 2px;
+                padding: 8px 4px;
                 font-size: 0.7rem;
                 font-weight: 600;
               }
@@ -780,6 +831,11 @@ export function Calendar() {
               .fc-event-time {
                 font-size: 0.65rem;
                 color: #000000 !important;
+              }
+              .fc-day-today .fc-daygrid-day-number {
+                width: 24px;
+                height: 24px;
+                font-size: 0.75rem;
               }
             }
           `}</style>
