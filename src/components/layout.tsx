@@ -13,7 +13,7 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-zinc-100 flex flex-col">
       <SideMenu />
       <div className="md:ml-64 flex flex-col flex-1 min-h-0">
-        <header className="bg-white shadow-sm flex-shrink-0 md:shadow-md border-b-2 border-gray-300 md:border-b md:border-gray-200">
+        <header className="bg-white shadow-sm flex-shrink-0 md:shadow-md border-b-2 border-gray-300 md:border-b md:border-gray-200 relative z-40">
           <div className="flex items-center h-20 px-4 relative">
             <div className="md:hidden">
               <img 

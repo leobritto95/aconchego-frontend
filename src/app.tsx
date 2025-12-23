@@ -11,6 +11,7 @@ import { ClassFeedbacks } from "./pages/class-feedbacks";
 import { StudentClassFeedbacksPage } from "./pages/student-class-feedbacks";
 import { Layout } from "./components/layout";
 import { Login } from "./pages/Login";
+import { ToastContainer } from "./components/toast";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -79,5 +80,10 @@ const router = createBrowserRouter([
 ]);
 
 export function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <ToastContainer />
+    </>
+  );
 }

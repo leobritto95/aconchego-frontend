@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { EventService } from '../services/eventService'
+import { Event } from '../types'
 
 export function useEvents(start?: string, end?: string) {
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -38,4 +39,39 @@ export function useEventById(id: string) {
     success: data?.success || false,
     message: data?.message || ''
   }
+}
+
+export function useCreateEvent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (eventData: Omit<Event, 'id'>) =>
+      EventService.createEvent(eventData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+    },
+  })
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, eventData }: { id: string; eventData: Partial<Event> }) =>
+      EventService.updateEvent(id, eventData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+    },
+  })
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => EventService.deleteEvent(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] })
+    },
+  })
 } 

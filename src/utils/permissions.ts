@@ -20,6 +20,11 @@ export function canViewFeedback(user: User | null, feedbackStudentId: number): b
   return false
 }
 
+export function canManageEventsAndClasses(user: User | null): boolean {
+  if (!user) return false
+  return ['admin', 'secretary'].includes(user.role)
+}
+
 export function getCurrentUserId(): number | null {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null

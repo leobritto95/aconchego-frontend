@@ -248,6 +248,28 @@ export const FULLCALENDAR_STYLES = `
       padding: 3px 6px;
       margin-top: 2px;
     }
+    .fc-timegrid-slot {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(146, 64, 14, 0.1);
+    }
+    .fc-timegrid-slot:active {
+      background-color: rgba(146, 64, 14, 0.05);
+    }
+    .fc-timegrid-col-frame {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .fc-timegrid-col {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .fc-timegrid-bg {
+      pointer-events: auto;
+    }
+    .fc-timegrid-bg .fc-timegrid-col {
+      pointer-events: auto;
+    }
   }
 `;
 
