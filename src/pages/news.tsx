@@ -50,15 +50,12 @@ export function News() {
         </div>
       ) : (
         <>
-          <div className="w-full max-w-4xl space-y-4">
+          <div className="w-full max-w-4xl space-y-6">
             {news.map((newsItem) => (
               <NewsCard
                 key={newsItem.id}
                 news={newsItem}
-                onClick={() => {
-                  // Aqui você pode implementar navegação para detalhes da notícia
-                  console.log("Clicou na notícia:", newsItem.id);
-                }}
+                onClick={() => {}}
               />
             ))}
           </div>
