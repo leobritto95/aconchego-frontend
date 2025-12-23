@@ -23,6 +23,11 @@ interface UserData {
 // Constantes
 const MOBILE_BREAKPOINT = 768;
 
+interface HoverHandlers {
+  mouseenter: () => void;
+  mouseleave: () => void;
+}
+
 function getEventDescription(event: EventClickArg["event"]): string | null {
   return event.extendedProps?.description || 
     ('description' in event && typeof (event as { description?: string }).description === 'string' 
@@ -112,6 +117,8 @@ export function Calendar() {
   const { classes } = useClasses();
   const [userRole, setUserRole] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
+  const calendarContainerRef = useRef<HTMLDivElement>(null);
 
   // Contar eventos de hoje
   const todayEventsCount = useMemo(() => {
@@ -231,6 +238,42 @@ export function Calendar() {
       calendarRef.getApi().gotoDate(date);
     }
   }, [calendarRef]);
+
+  // Função para destacar eventos relacionados da mesma turma
+  const highlightRelatedEvents = useCallback((classId: string | null) => {
+    if (!calendarContainerRef.current) return;
+    
+    const calendarRoot = calendarContainerRef.current.querySelector('.fc') as HTMLElement | null;
+    if (!calendarRoot) return;
+    
+    // Remover classe de destaque de todos os eventos primeiro
+    const allEventElements = calendarRoot.querySelectorAll('.fc-event');
+    allEventElements.forEach((el: Element) => {
+      const eventEl = el as HTMLElement;
+      eventEl.classList.remove('fc-event-related-hover');
+      eventEl.classList.remove('fc-event-related-active');
+    });
+    
+    // Se há um classId em hover, destacar eventos relacionados
+    if (classId) {
+      const relatedEvents = calendarRoot.querySelectorAll(`[data-class-id="${classId}"]`);
+      relatedEvents.forEach((el: Element) => {
+        const eventEl = el as HTMLElement;
+        eventEl.classList.add('fc-event-related-hover');
+        // O evento que está sendo hovered recebe uma classe adicional
+        if (eventEl.classList.contains('fc-event-hovered')) {
+          eventEl.classList.add('fc-event-related-active');
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      highlightRelatedEvents(hoveredClassId);
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [hoveredClassId, highlightRelatedEvents]);
 
   // Responsividade
   useEffect(() => {
@@ -468,7 +511,10 @@ export function Calendar() {
           selectedDate={selectedDate}
           onChange={handleMobileDateChange}
         />
-        <div className="flex-1 p-0 sm:p-6 overflow-hidden relative overscroll-contain touch-pan-y h-full">
+        <div 
+          ref={calendarContainerRef}
+          className="flex-1 p-0 sm:p-6 overflow-hidden relative overscroll-contain touch-pan-y h-full"
+        >
           {/* Loading overlay sutil durante atualizações */}
           {isFetching && !isLoading && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-opacity duration-200">
@@ -543,6 +589,51 @@ export function Calendar() {
               if (description) {
                 info.el.setAttribute("title", description);
                 info.el.setAttribute("data-tooltip", description);
+              }
+
+              // Adicionar event listeners para hover em eventos de turma
+              const eventType = info.event.extendedProps?.type;
+              const classId = info.event.extendedProps?.classId;
+              
+              if (eventType === 'recurring-class' && classId) {
+                // Adicionar data attribute para facilitar busca de eventos relacionados
+                info.el.setAttribute("data-class-id", String(classId));
+                
+                const handleMouseEnter = () => {
+                  info.el.classList.add('fc-event-hovered');
+                  setHoveredClassId(String(classId));
+                };
+                
+                const handleMouseLeave = () => {
+                  info.el.classList.remove('fc-event-hovered');
+                  setHoveredClassId(null);
+                };
+                
+                info.el.addEventListener('mouseenter', handleMouseEnter);
+                info.el.addEventListener('mouseleave', handleMouseLeave);
+                
+                // Armazenar referência aos handlers para cleanup posterior
+                // Usando uma propriedade customizada no elemento
+                const elWithHandlers = info.el as HTMLElement & { _hoverHandlers?: HoverHandlers };
+                elWithHandlers._hoverHandlers = {
+                  mouseenter: handleMouseEnter,
+                  mouseleave: handleMouseLeave,
+                };
+              }
+            }}
+            eventWillUnmount={(info) => {
+              // Cleanup: remover listeners quando o evento for desmontado
+              const elWithHandlers = info.el as HTMLElement & { _hoverHandlers?: HoverHandlers };
+              const handlers = elWithHandlers._hoverHandlers;
+              if (handlers) {
+                info.el.removeEventListener('mouseenter', handlers.mouseenter);
+                info.el.removeEventListener('mouseleave', handlers.mouseleave);
+                delete elWithHandlers._hoverHandlers;
+              }
+              
+              // Limpar estado se este evento estava em hover
+              if (info.el.classList.contains('fc-event-hovered')) {
+                setHoveredClassId(null);
               }
             }}
             datesSet={handleDatesSet}

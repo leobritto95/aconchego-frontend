@@ -64,6 +64,22 @@ export const FULLCALENDAR_STYLES = `
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 10;
   }
+  /* Estilo para eventos relacionados da mesma turma em hover - minimalista e elegante */
+  .fc-event-related-hover {
+    opacity: 0.95 !important;
+    filter: brightness(1.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    transition: opacity 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+  }
+  /* Estilo para o evento que está sendo hovered */
+  .fc-event-related-active {
+    opacity: 1 !important;
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+    z-index: 15 !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+  }
   .fc-event-title {
     font-weight: 600;
     line-height: 1.4;
@@ -209,6 +225,18 @@ export const FULLCALENDAR_STYLES = `
     .fc-event:active {
       opacity: 0.8;
       transform: scale(0.98);
+    }
+    /* Estilo para eventos relacionados em mobile */
+    .fc-event-related-hover {
+      opacity: 0.95 !important;
+      filter: brightness(1.08);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    }
+    .fc-event-related-active {
+      opacity: 1 !important;
+      filter: brightness(1.12);
+      z-index: 15 !important;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15) !important;
     }
     .fc-event-title {
       font-size: 0.75rem;
