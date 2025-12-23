@@ -758,8 +758,8 @@ export function Calendar() {
             nowIndicator={true}
             selectMirror={true}
             dayMaxEventRows={true}
-            editable={canManageEvents}
-            droppable={canManageEvents}
+            editable={false}
+            droppable={false}
             eventTimeFormat={{
               hour: "2-digit",
               minute: "2-digit",
