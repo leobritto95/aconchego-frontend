@@ -40,6 +40,7 @@ export interface Event {
     type: 'recurring-class' | 'single-event';
     classId?: string;
     isEnrolled?: boolean; // Se o aluno está matriculado (apenas para classes)
+    teacherName?: string; // Nome do professor (apenas para classes)
   };
 }
 

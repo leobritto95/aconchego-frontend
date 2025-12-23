@@ -157,6 +157,8 @@ function EventModal({
   canManageEvents = false,
 }: EventModalProps) {
   const description = useMemo(() => event ? getEventDescription(event) : null, [event]);
+  const teacherName = useMemo(() => event?.extendedProps?.teacherName, [event]);
+  const isClass = useMemo(() => event?.extendedProps?.type === 'recurring-class', [event]);
 
   if (!isOpen) return null;
 
@@ -211,6 +213,18 @@ function EventModal({
                 <EventSchedule start={event.start} end={event.end} />
               )}
             </div>
+
+            {isClass && teacherName && (
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <h4 className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Professor
+                </h4>
+                <p className="text-sm font-semibold text-gray-900">{teacherName}</p>
+              </div>
+            )}
 
             {description && (
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200">
