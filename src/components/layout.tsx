@@ -28,7 +28,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </header>
         <main className="flex-1 min-h-0 overflow-hidden bg-zinc-100 md:bg-zinc-100">
-          <div className="h-full p-0 pt-0 pb-16 md:p-4 md:pt-10 md:pb-4">
+          <div className="h-full p-0 pt-0 pb-16 md:p-4 md:pt-6 md:pb-4">
             {children}
           </div>
         </main>
