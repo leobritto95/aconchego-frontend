@@ -208,6 +208,10 @@ export function Calendar() {
       const classData = classes.find((c) => c.id === classId);
       if (classData) {
         setSelectedClass(classData);
+        // Definir a data do evento quando é uma classe
+        if (info.event.start) {
+          setSelectedDateForCreate(new Date(info.event.start));
+        }
         setIsClassModalOpen(true);
       }
     } else {

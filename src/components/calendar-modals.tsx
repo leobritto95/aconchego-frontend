@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, FormEvent } from "react";
 import { EventClickArg } from "@fullcalendar/core";
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from "../hooks/useEvents";
 import { useCreateClass, useUpdateClass, useDeleteClass } from "../hooks/useClasses";
+import { useClassExceptions, useCreateClassException, useDeleteClassException } from "../hooks/useClassException";
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "../services/userService";
 import { Class, ScheduleTime } from "../types";
@@ -494,6 +495,8 @@ const initialClassFormData = {
 export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage }: ClassModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showExceptionModal, setShowExceptionModal] = useState(false);
+  const [exceptionReason, setExceptionReason] = useState("");
   const [formData, setFormData] = useState(initialClassFormData);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -512,6 +515,21 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
   const createMutation = useCreateClass();
   const updateMutation = useUpdateClass();
   const deleteMutation = useDeleteClass();
+  
+  const classId = classData ? (typeof classData.id === "string" ? classData.id : String(classData.id)) : null;
+  const { exceptions } = useClassExceptions(classId);
+  const createExceptionMutation = useCreateClassException();
+  const deleteExceptionMutation = useDeleteClassException();
+  
+  // Verificar se há exceção para a data selecionada
+  const selectedDateException = useMemo(() => {
+    if (!selectedDate || !exceptions.length) return null;
+    const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0];
+    return exceptions.find((ex) => {
+      const exDateStr = new Date(ex.date).toISOString().split('T')[0];
+      return exDateStr === selectedDateStr;
+    }) || null;
+  }, [selectedDate, exceptions]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -536,6 +554,8 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
       setIsEditing(false);
       setFormData(initialClassFormData);
       setShowDeleteConfirm(false);
+      setShowExceptionModal(false);
+      setExceptionReason("");
     }
   }, [isOpen]);
 
@@ -756,9 +776,43 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
     }
   };
 
+  const handleCreateException = async () => {
+    if (!classData || !selectedDate || !classId) return;
+
+    try {
+      const dateStr = new Date(selectedDate).toISOString();
+      await createExceptionMutation.mutateAsync({
+        classId,
+        date: dateStr,
+        reason: exceptionReason.trim() || undefined,
+      });
+      toast.success("Aula cancelada para esta data com sucesso!");
+      setShowExceptionModal(false);
+      setExceptionReason("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao cancelar aula";
+      toast.error(message);
+    }
+  };
+
+  const handleDeleteException = async () => {
+    if (!selectedDateException || !classId) return;
+
+    try {
+      await deleteExceptionMutation.mutateAsync({
+        id: selectedDateException.id,
+        classId,
+      });
+      toast.success("Cancelamento removido com sucesso!");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao remover cancelamento";
+      toast.error(message);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const isLoading = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+  const isLoading = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending || createExceptionMutation.isPending || deleteExceptionMutation.isPending;
 
   return (
     <>
@@ -767,23 +821,23 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-xl p-4 sm:p-6 max-w-2xl w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-xl p-4 sm:p-5 max-w-2xl w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby={classData ? "class-title" : "new-class-title"}
         >
-          <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
-                <BookIcon className="w-5 h-5 text-white" />
+          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+            <div className="flex items-start gap-2.5">
+              <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
+                <BookIcon className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h3 id={classData ? "class-title" : "new-class-title"} className="text-xl font-bold text-gray-900">
+                <h3 id={classData ? "class-title" : "new-class-title"} className="text-lg font-bold text-gray-900">
                   {isEditing ? "Editar Turma" : classData ? "Detalhes da Turma" : "Nova Turma"}
                 </h3>
                 {!classData && (
-                  <p className="text-sm text-gray-500 mt-1">Configure uma turma recorrente</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Configure uma turma recorrente</p>
                 )}
               </div>
             </div>
@@ -1020,60 +1074,60 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
               </div>
             </form>
           ) : (
-            <div className="space-y-3 sm:space-y-5">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-lg p-3 sm:p-4 border border-blue-200">
-                <h4 className="text-[10px] sm:text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1 sm:mb-2">Nome</h4>
-                <p className="text-sm sm:text-base font-semibold text-gray-900">{classData.name}</p>
+            <div className="space-y-2.5">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-lg p-2.5 border border-blue-200">
+                <h4 className="text-[10px] font-semibold text-blue-900 uppercase tracking-wide mb-1">Nome</h4>
+                <p className="text-sm font-semibold text-gray-900">{classData.name}</p>
               </div>
 
               {classData.teacherId && teachersData && (
-                <div className="bg-blue-50 rounded-lg p-2.5 sm:p-3 border border-blue-200">
-                  <h4 className="text-[10px] sm:text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1.5 sm:mb-2 flex items-center gap-1">
-                    <UserIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-200">
+                  <h4 className="text-[10px] font-semibold text-blue-900 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <UserIcon className="w-3 h-3" />
                     Professor
                   </h4>
-                  <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                  <p className="text-xs font-semibold text-gray-900">
                     {teachersData.find((t) => String(t.id) === String(classData.teacherId))?.name || "Não definido"}
                   </p>
                 </div>
               )}
 
               {classData.style && (
-                <div className="bg-purple-50 rounded-lg p-2.5 sm:p-3 border border-purple-200">
-                  <h4 className="text-[10px] sm:text-xs font-semibold text-purple-900 uppercase tracking-wide mb-1.5 sm:mb-2 flex items-center gap-1">
-                    <TagIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <div className="bg-purple-50 rounded-lg p-2.5 border border-purple-200">
+                  <h4 className="text-[10px] font-semibold text-purple-900 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <TagIcon className="w-3 h-3" />
                     Estilo
                   </h4>
-                  <p className="text-xs sm:text-sm font-semibold text-gray-900">{classData.style}</p>
+                  <p className="text-xs font-semibold text-gray-900">{classData.style}</p>
                 </div>
               )}
 
               {classData.description && (
-                <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 sm:mb-3 flex items-center gap-1">
-                    <DocumentIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg p-2.5 border border-gray-200">
+                  <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <DocumentIcon className="w-3 h-3" />
                     Descrição
                   </h4>
-                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-white/70 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 border border-gray-100">
+                  <p className="text-xs text-gray-700 leading-relaxed bg-white/70 rounded-lg px-2.5 py-2 border border-gray-100">
                     {classData.description}
                   </p>
                 </div>
               )}
 
               {classData.recurringDays && classData.recurringDays.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
-                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5 sm:mb-2 flex items-center gap-1">
-                    <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                  <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <ClockIcon className="w-3 h-3" />
                     Horários
                   </h4>
-                  <div className="space-y-1.5 sm:space-y-2 mt-2 sm:mt-3">
+                  <div className="space-y-1.5 mt-1.5">
                     {classData.recurringDays.map((day) => {
                       const schedule = classData.scheduleTimes?.[day.toString()];
                       if (!schedule) return null;
                       return (
-                        <div key={day} className="flex items-center justify-between bg-white rounded-md px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-200">
-                          <span className="text-xs sm:text-sm font-medium text-gray-700">{DAY_NAMES[day]}</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900">
+                        <div key={day} className="flex items-center justify-between bg-white rounded-md px-2.5 py-1.5 border border-gray-200">
+                          <span className="text-xs font-medium text-gray-700">{DAY_NAMES[day]}</span>
+                          <span className="text-xs font-semibold text-gray-900">
                             {schedule.startTime} - {schedule.endTime}
                           </span>
                         </div>
@@ -1083,38 +1137,77 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
-                <h4 className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5 sm:mb-2 flex items-center gap-1">
-                  <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <CalendarIcon className="w-3 h-3" />
                   Período
                 </h4>
-                <div className="space-y-0.5 sm:space-y-1 mt-1.5 sm:mt-2">
-                  <p className="text-xs sm:text-sm text-gray-700">
+                <div className="space-y-0.5 mt-1.5">
+                  <p className="text-xs text-gray-700">
                     <span className="font-semibold">Início:</span>{" "}
                     {classData.startDate ? new Date(classData.startDate).toLocaleDateString("pt-BR") : "Não definido"}
                   </p>
                   {classData.endDate && (
-                    <p className="text-xs sm:text-sm text-gray-700">
+                    <p className="text-xs text-gray-700">
                       <span className="font-semibold">Fim:</span> {new Date(classData.endDate).toLocaleDateString("pt-BR")}
                     </p>
                   )}
                   {!classData.endDate && (
-                    <p className="text-xs sm:text-sm text-gray-500 italic">Sem data de fim definida</p>
+                    <p className="text-xs text-gray-500 italic">Sem data de fim definida</p>
                   )}
                 </div>
               </div>
 
+              {/* Seção de exceção para data específica */}
+              {canManage && selectedDate && (
+                <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                  <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+                    <CalendarIcon className="w-3 h-3" />
+                    Aula do dia {selectedDate ? new Date(selectedDate).toLocaleDateString("pt-BR") : ""}
+                  </h4>
+                  {selectedDateException ? (
+                    <div className="space-y-2">
+                      <div className="bg-white rounded-lg p-2.5 border border-gray-300">
+                        <p className="text-xs text-gray-700 mb-1">
+                          <span className="font-semibold text-red-600">Aula cancelada para esta data</span>
+                        </p>
+                        {selectedDateException.reason && (
+                          <p className="text-xs text-gray-600 italic">
+                            Motivo: {selectedDateException.reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleDeleteException}
+                        disabled={deleteExceptionMutation.isPending || isLoading}
+                        className="w-full px-3 py-2 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow disabled:opacity-50"
+                      >
+                        {deleteExceptionMutation.isPending ? "Removendo..." : "Reativar aula para esta data"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowExceptionModal(true)}
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 text-xs font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition-colors shadow-sm hover:shadow disabled:opacity-50"
+                    >
+                      Cancelar aula para esta data
+                    </button>
+                  )}
+                </div>
+              )}
+
               {canManage && (
-                <div className="flex justify-end gap-2 sm:gap-3 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors shadow-sm hover:shadow"
+                    className="px-3 py-2 text-xs font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors shadow-sm hover:shadow"
                   >
                     Editar
                   </button>
                   <button
                     onClick={handleToggleActive}
-                    className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md ${
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md ${
                       formData.active
                         ? "bg-yellow-600 hover:bg-yellow-700 text-white"
                         : "bg-green-600 hover:bg-green-700 text-white"
@@ -1125,7 +1218,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
+                    className="px-3 py-2 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
                     disabled={isLoading}
                   >
                     Excluir
@@ -1148,6 +1241,72 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         confirmButtonClass="bg-red-600 hover:bg-red-700"
         isLoading={isLoading}
       />
+
+      {/* Modal para criar exceção */}
+      {showExceptionModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110] animate-in fade-in duration-200"
+          onClick={() => setShowExceptionModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Cancelar aula para esta data</h3>
+              <button
+                onClick={() => setShowExceptionModal(false)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+                aria-label="Fechar"
+                disabled={createExceptionMutation.isPending}
+              >
+                <CloseIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Data: <span className="font-semibold">{selectedDate ? new Date(selectedDate).toLocaleDateString("pt-BR") : ""}</span>
+                </p>
+                <label htmlFor="exceptionReason" className="block text-sm font-medium text-gray-700 mb-2">
+                  Motivo do cancelamento <span className="text-gray-500 text-xs font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  id="exceptionReason"
+                  value={exceptionReason}
+                  onChange={(e) => setExceptionReason(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all resize-none shadow-sm"
+                  placeholder="Ex: Feriado, professor ausente..."
+                  disabled={createExceptionMutation.isPending}
+                />
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExceptionModal(false);
+                    setExceptionReason("");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                  disabled={createExceptionMutation.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateException}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={createExceptionMutation.isPending}
+                >
+                  {createExceptionMutation.isPending ? "Cancelando..." : "Confirmar cancelamento"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
