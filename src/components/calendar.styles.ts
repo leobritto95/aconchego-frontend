@@ -64,7 +64,7 @@ export const FULLCALENDAR_STYLES = `
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 10;
   }
-  /* Estilo para eventos relacionados da mesma turma em hover - minimalista e elegante */
+  /* Estilo para eventos relacionados da mesma turma em hover */
   .fc-event-related-hover {
     opacity: 0.95 !important;
     filter: brightness(1.08);

@@ -31,7 +31,7 @@ export function Feedback() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { feedbacks, isLoading, error, refetch, pagination } = useFeedback(
+  const { isLoading, error, refetch, pagination } = useFeedback(
     currentPage,
     10,
     appliedStyle || undefined,
@@ -60,16 +60,8 @@ export function Feedback() {
       appliedEndDate || undefined
     );
 
-  function goToFeedbackDetails(feedbackId: number) {
-    navigate(`/feedback/${feedbackId}`);
-  }
-
   function goToClassFeedbacks(classId: number) {
     navigate(`/feedback/class/${classId}`);
-  }
-
-  function goToStudentClassFeedbacks(classId: number, date: string) {
-    navigate(`/feedback/student/class/${classId}/${date}`);
   }
 
   const handleStyleFilter = (style: string) => {
