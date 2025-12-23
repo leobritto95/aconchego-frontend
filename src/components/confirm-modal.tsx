@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { CloseIcon } from "./icons";
 
 interface ConfirmModalProps {
@@ -23,6 +24,22 @@ export function ConfirmModal({
   confirmButtonClass = "bg-red-600 hover:bg-red-700",
   isLoading = false,
 }: ConfirmModalProps) {
+  // Listener para fechar modal com ESC
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoading) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, isLoading, onClose]);
+
   if (!isOpen) return null;
 
   const handleConfirm = () => {
