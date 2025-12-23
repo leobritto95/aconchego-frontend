@@ -255,33 +255,35 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-xl p-4 sm:p-6 max-w-md w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          className={`bg-white rounded-xl shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto ${
+            isEditing || !event ? "p-2 sm:p-4 max-w-md w-full" : "p-3 sm:p-6 max-w-md w-full"
+          }`}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby={event ? "event-title" : "new-event-title"}
         >
-          <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                <CalendarIcon className="w-5 h-5 text-white" />
+          <div className={`flex justify-between items-start border-b border-gray-200 ${isEditing || !event ? "mb-2 pb-1.5 sm:mb-3 sm:pb-2" : "mb-4 pb-3 sm:mb-6 sm:pb-4"}`}>
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 id={event ? "event-title" : "new-event-title"} className="text-xl font-bold text-gray-900">
+                <h3 id={event ? "event-title" : "new-event-title"} className="text-base sm:text-xl font-bold text-gray-900">
                   {isEditing ? "Editar Evento" : event ? "Detalhes do Evento" : "Novo Evento"}
                 </h3>
                 {!event && (
-                  <p className="text-sm text-gray-500 mt-1">Crie um evento único no calendário</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">Crie um evento único no calendário</p>
                 )}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1 sm:p-1.5 transition-colors"
               aria-label="Fechar"
               disabled={isLoading}
             >
-              <CloseIcon className="h-5 w-5" />
+              <CloseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
 
@@ -296,16 +298,16 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
               </button>
             </div>
           ) : isEditing || !event ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
               {/* Informações do Evento */}
-              <div className="bg-gray-50 rounded-xl p-5 space-y-4 border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
-                  <h4 className="text-sm font-semibold text-gray-800">Informações do Evento</h4>
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 sm:space-y-3 border border-gray-100">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1 h-2.5 sm:h-3 bg-blue-500 rounded-full"></div>
+                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-800">Informações do Evento</h4>
                 </div>
                 
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="title" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                     Título <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -315,22 +317,22 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                     placeholder="Ex: Reunião de planejamento"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="description" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                     Descrição
                   </label>
                   <textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none shadow-sm"
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none shadow-sm"
                     placeholder="Adicione detalhes sobre o evento..."
                     disabled={isLoading}
                   />
@@ -338,15 +340,15 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
               </div>
 
               {/* Data e Horário */}
-              <div className="bg-gray-50 rounded-xl p-5 space-y-4 border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <ClockIcon className="w-4 h-4 text-gray-600" />
-                  <h4 className="text-sm font-semibold text-gray-800">Data e Horário</h4>
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 sm:space-y-3 border border-gray-100">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600" />
+                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-800">Data e Horário</h4>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <label htmlFor="start" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="start" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Data e Hora de Início <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -355,12 +357,12 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
                       required
                       value={formData.start}
                       onChange={(e) => setFormData({ ...formData, start: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
-                    <label htmlFor="end" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="end" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Data e Hora de Fim <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -369,7 +371,7 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
                       required
                       value={formData.end}
                       onChange={(e) => setFormData({ ...formData, end: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm"
                       disabled={isLoading}
                     />
                   </div>
@@ -377,21 +379,21 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setIsEditing(false);
                     if (!event) onClose();
                   }}
-                  className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
                   disabled={isLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
                   {isLoading ? "Salvando..." : "Salvar Evento"}
@@ -822,48 +824,50 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-xl p-4 sm:p-5 max-w-2xl w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          className={`bg-white rounded-xl shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto ${
+            isEditing || !classData ? "p-2 sm:p-4 max-w-2xl w-full" : "p-3 sm:p-5 max-w-2xl w-full"
+          }`}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
           aria-labelledby={classData ? "class-title" : "new-class-title"}
         >
-          <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
-            <div className="flex items-start gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
-                <BookIcon className="w-4.5 h-4.5 text-white" />
+          <div className={`flex justify-between items-start border-b border-gray-200 ${isEditing || !classData ? "mb-2 pb-1.5 sm:mb-3 sm:pb-2" : "mb-3 pb-2 sm:mb-4 sm:pb-3"}`}>
+            <div className="flex items-start gap-2 sm:gap-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
+                <BookIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
               </div>
               <div>
-                <h3 id={classData ? "class-title" : "new-class-title"} className="text-lg font-bold text-gray-900">
+                <h3 id={classData ? "class-title" : "new-class-title"} className="text-base sm:text-lg font-bold text-gray-900">
                   {isEditing ? "Editar Turma" : classData ? "Detalhes da Turma" : "Nova Turma"}
                 </h3>
                 {!classData && (
-                  <p className="text-xs text-gray-500 mt-0.5">Configure uma turma recorrente</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">Configure uma turma recorrente</p>
                 )}
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1 sm:p-1.5 transition-colors"
               aria-label="Fechar"
               disabled={isLoading}
             >
-              <CloseIcon className="h-5 w-5" />
+              <CloseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
 
           {isEditing || !classData ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
               {/* Informações Básicas */}
-              <div className="bg-gray-50 rounded-xl p-5 space-y-4 border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-1 h-4 bg-green-500 rounded-full"></div>
-                  <h4 className="text-sm font-semibold text-gray-800">Informações Básicas</h4>
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 sm:space-y-3 border border-gray-100">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-1 h-2.5 sm:h-3 bg-green-500 rounded-full"></div>
+                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-800">Informações Básicas</h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="name" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Nome da Turma <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -873,13 +877,13 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
                       placeholder="Ex: Dança de Salão - Iniciantes"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
-                    <label htmlFor="teacherId" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="teacherId" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Professor <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -887,7 +891,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                       required
                       value={formData.teacherId}
                       onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
                       disabled={isLoading}
                     >
                       <option value="">Selecione um professor</option>
@@ -900,9 +904,9 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <label htmlFor="style" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="style" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Estilo
                     </label>
                     <input
@@ -910,13 +914,13 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                       id="style"
                       value={formData.style}
                       onChange={(e) => setFormData({ ...formData, style: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
                       placeholder="Ex: Salsa, Bachata, Forró"
                       disabled={isLoading}
                     />
                   </div>
                   {classData && (
-                    <div className="flex items-center gap-2 pt-8">
+                    <div className="flex items-center gap-2 pt-5 sm:pt-6">
                       <input
                         type="checkbox"
                         id="active"
@@ -925,7 +929,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                         className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                         disabled={isLoading}
                       />
-                      <label htmlFor="active" className="text-sm font-medium text-gray-700 cursor-pointer">
+                      <label htmlFor="active" className="text-[10px] sm:text-xs font-medium text-gray-700 cursor-pointer">
                         Turma ativa
                       </label>
                     </div>
@@ -933,15 +937,15 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="description" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                     Descrição
                   </label>
                   <textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none shadow-sm"
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none shadow-sm"
                     placeholder="Descreva a turma, objetivos, público-alvo..."
                     disabled={isLoading}
                   />
@@ -949,15 +953,15 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
               </div>
 
               {/* Período */}
-              <div className="bg-gray-50 rounded-xl p-5 space-y-4 border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <CalendarIcon className="w-4 h-4 text-gray-600" />
-                  <h4 className="text-sm font-semibold text-gray-800">Período</h4>
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 sm:space-y-3 border border-gray-100">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600" />
+                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-800">Período</h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="startDate" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
                       Data de Início <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -966,13 +970,13 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                       required
                       value={formData.startDate}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
                       disabled={isLoading}
                     />
                   </div>
                   <div>
-                    <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-                      Data de Fim <span className="text-gray-500 text-xs font-normal">(opcional)</span>
+                    <label htmlFor="endDate" className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1 sm:mb-1.5">
+                      Data de Fim <span className="text-gray-500 text-[10px] sm:text-xs font-normal">(opcional)</span>
                     </label>
                     <input
                       type="date"
@@ -980,7 +984,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                       value={formData.endDate}
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                       min={formData.startDate}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all shadow-sm"
                       disabled={isLoading}
                     />
                   </div>
@@ -988,23 +992,23 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
               </div>
 
               {/* Dias e Horários */}
-              <div className="bg-gray-50 rounded-xl p-5 space-y-4 border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <ClockIcon className="w-4 h-4 text-gray-600" />
-                  <h4 className="text-sm font-semibold text-gray-800">Dias e Horários</h4>
+              <div className="bg-gray-50 rounded-lg p-2 sm:p-3 space-y-2 sm:space-y-3 border border-gray-100">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-600" />
+                  <h4 className="text-[10px] sm:text-xs font-semibold text-gray-800">Dias e Horários</h4>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1.5 sm:mb-2">
                     Dias da Semana <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
                     {DAYS_OF_WEEK.map((day) => (
                       <button
                         key={day.value}
                         type="button"
                         onClick={() => handleDayToggle(day.value)}
-                        className={`p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+                        className={`p-1.5 sm:p-2 rounded-lg border-2 transition-all text-[10px] sm:text-xs font-medium ${
                           formData.recurringDays.includes(day.value)
                             ? "border-green-500 bg-green-50 text-green-900 shadow-sm"
                             : "border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
@@ -1019,29 +1023,29 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
 
                 {formData.recurringDays.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Horários por Dia</label>
-                    <div className="space-y-2">
+                    <label className="block text-[10px] sm:text-xs font-medium text-gray-700 mb-1.5 sm:mb-2">Horários por Dia</label>
+                    <div className="space-y-1.5 sm:space-y-2">
                       {formData.recurringDays.map((day) => {
                         const dayLabel = DAYS_OF_WEEK.find((d) => d.value === day)?.label || "";
                         const schedule = formData.scheduleTimes[day.toString()] || { startTime: DEFAULT_START_TIME, endTime: DEFAULT_END_TIME };
                         return (
-                          <div key={day} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
-                            <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{dayLabel}</span>
+                          <div key={day} className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                            <span className="text-[10px] sm:text-xs font-medium text-gray-700 w-16 sm:w-20 flex-shrink-0">{dayLabel}</span>
                             <input
                               type="time"
                               value={schedule.startTime}
                               onChange={(e) => handleScheduleTimeChange(day, "startTime", e.target.value)}
                               onBlur={(e) => handleScheduleTimeBlur(day, "startTime", e.target.value)}
-                              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                              className="flex-1 rounded-lg border border-gray-300 px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                               disabled={isLoading}
                             />
-                            <span className="text-sm text-gray-500 font-medium">até</span>
+                            <span className="text-[10px] sm:text-xs text-gray-500 font-medium">até</span>
                             <input
                               type="time"
                               value={schedule.endTime}
                               onChange={(e) => handleScheduleTimeChange(day, "endTime", e.target.value)}
                               onBlur={(e) => handleScheduleTimeBlur(day, "endTime", e.target.value)}
-                              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                              className="flex-1 rounded-lg border border-gray-300 px-1.5 sm:px-2 py-1 sm:py-1.5 text-[10px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                               disabled={isLoading}
                             />
                           </div>
@@ -1053,21 +1057,21 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setIsEditing(false);
                     if (!classData) onClose();
                   }}
-                  className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
                   disabled={isLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
                   {isLoading ? "Salvando..." : "Salvar Turma"}
