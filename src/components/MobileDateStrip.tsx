@@ -25,7 +25,7 @@ export const MobileDateStrip: React.FC<MobileDateStripProps> = ({ selectedDate, 
   };
 
   return (
-    <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white px-2 py-2 sm:hidden overflow-x-auto scrollbar-hide border-b border-amber-200">
+    <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-white px-2 py-1.5 sm:hidden overflow-x-auto scrollbar-hide border-b border-amber-200/50">
       <div className="flex-1 flex justify-between min-w-0 gap-1">
         {weekDates.map((date) => {
           const isSelected = date.toDateString() === selectedDate.toDateString();

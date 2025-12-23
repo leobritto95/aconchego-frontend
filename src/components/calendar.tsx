@@ -350,7 +350,7 @@ function CalendarLegend({ userRole }: CalendarLegendProps) {
   }, [userRole]);
 
   return (
-    <div className="px-2 sm:px-6 py-1.5 sm:py-2.5 bg-white border-b border-gray-200">
+    <div className="px-2 sm:px-6 py-1 sm:py-2.5 bg-white border-b border-gray-200">
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm">
         <span className="text-gray-600 font-semibold text-[9px] sm:text-xs uppercase tracking-wide hidden sm:inline mr-1">
           Legenda:
@@ -540,13 +540,13 @@ export function Calendar() {
   }
 
   return (
-    <div className="flex-1 flex flex-col pb-20">
-      <div className="flex-1 flex flex-col bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
+    <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col bg-white sm:rounded-xl sm:shadow-xl overflow-hidden sm:border sm:border-gray-100 h-full md:shadow-lg shadow-md">
         {/* Header */}
-        <div className="p-2.5 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-50/90 via-amber-50 to-amber-50/90 shadow-sm">
+        <div className="p-2 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-100/95 via-amber-100 to-amber-100/95 sm:shadow-sm shadow-sm">
           {/* Mobile: Layout Simplificado */}
           <div className="sm:hidden">
-            <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg font-bold text-amber-900 drop-shadow-sm truncate">Agenda</h2>
                 {todayEventsCount > 0 && (
@@ -724,7 +724,7 @@ export function Calendar() {
           selectedDate={selectedDate}
           onChange={handleMobileDateChange}
         />
-        <div className="flex-1 p-1.5 sm:p-6 overflow-auto relative overscroll-contain touch-pan-y">
+        <div className="flex-1 p-0 sm:p-6 overflow-hidden relative overscroll-contain touch-pan-y h-full">
           {/* Loading overlay sutil durante atualizações */}
           {isFetching && !isLoading && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none transition-opacity duration-200">
@@ -737,6 +737,13 @@ export function Calendar() {
           <style>{`
             .fc {
               font-family: inherit;
+              height: 100% !important;
+            }
+            .fc-view-harness {
+              height: 100% !important;
+            }
+            .fc-view-harness-active {
+              height: 100% !important;
             }
             .fc-theme-standard td, .fc-theme-standard th {
               border-color: #e5e7eb;
@@ -870,12 +877,34 @@ export function Calendar() {
               color: #78350f;
             }
             @media (max-width: 768px) {
+              .fc-scrollgrid {
+                border: none;
+                -webkit-overflow-scrolling: touch;
+                height: 100% !important;
+                min-height: 100% !important;
+              }
+              .fc-scrollgrid-section {
+                height: 100% !important;
+                min-height: 100% !important;
+                border-left: none;
+                border-right: none;
+              }
+              .fc-scrollgrid-section-body {
+                height: 100% !important;
+                min-height: 100% !important;
+              }
+              .fc-timegrid-body {
+                height: 100% !important;
+                min-height: 100% !important;
+              }
               .fc-col-header-cell {
-                padding: 10px 6px;
+                padding: 10px 4px;
                 font-size: 0.75rem;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+                border-left: none;
+                border-right: none;
               }
               .fc-timegrid-slot {
                 height: 2.5em;
@@ -883,18 +912,25 @@ export function Calendar() {
               }
               .fc-timegrid-slot-label {
                 font-size: 0.7rem;
-                padding: 4px 6px;
+                padding: 4px 4px;
                 font-weight: 600;
               }
               .fc-timegrid-slot-label-cushion {
-                padding-right: 4px;
+                padding-right: 2px;
+              }
+              .fc-timegrid-col {
+                border-left: none;
+                border-right: 1px solid #e5e7eb;
+              }
+              .fc-timegrid-col:last-child {
+                border-right: none;
               }
               .fc-event {
                 font-size: 0.75rem;
-                padding: 5px 7px;
+                padding: 5px 6px;
                 border-radius: 6px;
                 font-weight: 600;
-                margin: 2px 3px;
+                margin: 2px 2px;
                 min-height: 26px;
                 display: flex;
                 align-items: center;
@@ -927,19 +963,16 @@ export function Calendar() {
                 font-size: 0.8rem;
               }
               .fc-timegrid-col-frame {
-                padding-right: 3px;
+                padding-right: 2px;
               }
               .fc-scrollgrid-sync-inner {
-                padding: 3px;
+                padding: 2px;
               }
               .fc-timegrid-event-harness {
                 margin: 2px 0;
               }
               .fc-timegrid-col {
                 min-width: 0;
-              }
-              .fc-scrollgrid {
-                -webkit-overflow-scrolling: touch;
               }
               .fc-more-link {
                 font-size: 0.7rem;
@@ -988,7 +1021,7 @@ export function Calendar() {
             moreLinkClassNames="text-amber-700 hover:text-amber-800 font-semibold"
             moreLinkContent={(args) => `+${args.num} mais`}
             contentHeight="auto"
-            aspectRatio={1.35}
+            aspectRatio={isMobile ? undefined : 1.35}
             lazyFetching={true}
             eventDisplay="block"
             views={{
