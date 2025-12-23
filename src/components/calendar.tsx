@@ -747,8 +747,8 @@ export function Calendar() {
             selectable={canManageEvents}
             select={handleDateSelect}
             height="100%"
-            slotMinTime="06:00:00"
-            slotMaxTime="22:00:00"
+            slotMinTime="07:00:00"
+            slotMaxTime="23:00:00"
             allDaySlot={false}
             slotDuration="00:30:00"
             expandRows={true}
@@ -782,13 +782,13 @@ export function Calendar() {
             views={{
               timeGridDay: {
                 titleFormat: { year: "numeric", month: "long", day: "numeric" },
-                slotMinTime: "06:00:00",
+                slotMinTime: "08:00:00",
                 slotMaxTime: "22:00:00",
               },
               timeGridWeek: {
                 titleFormat: { year: "numeric", month: "long" },
-                slotMinTime: "06:00:00",
-                slotMaxTime: "22:00:00",
+                slotMinTime: "07:00:00",
+                slotMaxTime: "23:00:00",
               },
             }}
             eventDidMount={(info) => {
