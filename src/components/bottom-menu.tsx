@@ -32,8 +32,8 @@ export function BottomMenu() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <div className="flex justify-around items-center p-2 bg-stone-50 shadow-[0_-3px_2px_0_rgb(0,0,0,0.05)]">
+    <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-stone-50 shadow-[0_-3px_2px_0_rgb(0,0,0,0.05)] h-[72px]">
+      <div className="flex justify-around items-center py-2 px-2 h-full">
         <button
           className={`flex flex-col items-center flex-1 p-1 ${
             isActive("/")

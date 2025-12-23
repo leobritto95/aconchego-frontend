@@ -6,13 +6,66 @@
 export const FULLCALENDAR_STYLES = `
   .fc {
     font-family: inherit;
-    height: 100% !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
-  .fc-view-harness {
-    height: 100% !important;
+  @media (min-width: 769px) {
+    .fc {
+      height: auto !important;
+    }
   }
+  .fc-view-harness,
   .fc-view-harness-active {
-    height: 100% !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  @media (min-width: 769px) {
+    .fc-view-harness,
+    .fc-view-harness-active {
+      overflow: visible !important;
+      height: auto !important;
+    }
+    .fc-scrollgrid {
+      height: auto !important;
+      max-width: 100%;
+    }
+    .fc-scrollgrid-section {
+      height: auto !important;
+    }
+    .fc-scrollgrid-section-body {
+      overflow-y: visible !important;
+      overflow-x: hidden !important;
+      height: auto !important;
+    }
+    .fc-timegrid-body {
+      overflow-y: visible !important;
+      overflow-x: hidden !important;
+      height: auto !important;
+    }
+    .fc-timegrid-col {
+      height: auto !important;
+      max-width: 100%;
+    }
+    .fc-timegrid-col-frame {
+      height: auto !important;
+      max-width: 100%;
+    }
+    .fc-scrollgrid-sync-table {
+      height: auto !important;
+      max-width: 100%;
+    }
+    .fc-event {
+      max-width: 100%;
+      box-sizing: border-box;
+      word-wrap: break-word;
+    }
+    .fc-scrollgrid-sync-inner {
+      max-width: 100%;
+    }
   }
   .fc-theme-standard td, .fc-theme-standard th {
     border-color: #e5e7eb;
@@ -35,10 +88,6 @@ export const FULLCALENDAR_STYLES = `
   }
   .fc-timegrid-col.fc-day-today {
     background-color: #fffbeb;
-  }
-  .fc-timegrid-slot {
-    height: 3em;
-    border-color: #f3f4f6;
   }
   .fc-timegrid-slot-label {
     font-size: 0.75rem;
@@ -147,8 +196,33 @@ export const FULLCALENDAR_STYLES = `
   .fc-scrollgrid-section-header > td {
     border-color: #e5e7eb;
   }
-  .fc-timegrid-col-frame {
-    border-right-color: #e5e7eb;
+  .fc-scrollgrid-sync-table {
+    height: auto !important;
+  }
+  .fc-timegrid-body {
+    overflow-y: visible !important;
+  }
+  .fc-scrollgrid-section-body {
+    overflow-y: visible !important;
+    overflow-x: hidden;
+  }
+  .fc-timegrid-slot {
+    height: 3em;
+    border-color: #f3f4f6;
+  }
+  @media (min-width: 769px) {
+    .fc-view-harness,
+    .fc-view-harness-active {
+      overflow: visible;
+    }
+    .fc-scrollgrid {
+      height: auto !important;
+    }
+    .fc-scrollgrid-section-body {
+      overflow-y: visible !important;
+      overflow-x: hidden !important;
+      max-height: none !important;
+    }
   }
   .fc-more-link {
     font-weight: 600;
@@ -162,25 +236,23 @@ export const FULLCALENDAR_STYLES = `
     color: #78350f;
   }
   @media (max-width: 768px) {
+    .fc-view-harness,
+    .fc-view-harness-active {
+      overflow: hidden !important;
+    }
     .fc-scrollgrid {
       border: none;
       -webkit-overflow-scrolling: touch;
-      height: 100% !important;
-      min-height: 100% !important;
     }
     .fc-scrollgrid-section {
-      height: 100% !important;
-      min-height: 100% !important;
       border-left: none;
       border-right: none;
     }
     .fc-scrollgrid-section-body {
-      height: 100% !important;
-      min-height: 100% !important;
-    }
-    .fc-timegrid-body {
-      height: 100% !important;
-      min-height: 100% !important;
+      overflow-y: auto !important;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
     .fc-col-header-cell {
       padding: 10px 4px;
@@ -193,11 +265,10 @@ export const FULLCALENDAR_STYLES = `
     }
     .fc-timegrid-slot {
       height: 2.5em;
-      min-height: 2.5em;
     }
     .fc-timegrid-slot-label {
       font-size: 0.7rem;
-      padding: 4px 4px;
+      padding: 4px;
       font-weight: 600;
     }
     .fc-timegrid-slot-label-cushion {
@@ -215,7 +286,7 @@ export const FULLCALENDAR_STYLES = `
       padding: 5px 6px;
       border-radius: 6px;
       font-weight: 600;
-      margin: 2px 2px;
+      margin: 2px;
       min-height: 26px;
       display: flex;
       align-items: center;
@@ -261,6 +332,7 @@ export const FULLCALENDAR_STYLES = `
     }
     .fc-timegrid-col-frame {
       padding-right: 2px;
+      border-right-color: #e5e7eb;
     }
     .fc-scrollgrid-sync-inner {
       padding: 2px;
@@ -284,10 +356,7 @@ export const FULLCALENDAR_STYLES = `
     .fc-timegrid-slot:active {
       background-color: rgba(146, 64, 14, 0.05);
     }
-    .fc-timegrid-col-frame {
-      cursor: pointer;
-      touch-action: manipulation;
-    }
+    .fc-timegrid-col-frame,
     .fc-timegrid-col {
       cursor: pointer;
       touch-action: manipulation;
@@ -295,9 +364,5 @@ export const FULLCALENDAR_STYLES = `
     .fc-timegrid-bg {
       pointer-events: auto;
     }
-    .fc-timegrid-bg .fc-timegrid-col {
-      pointer-events: auto;
-    }
   }
 `;
-

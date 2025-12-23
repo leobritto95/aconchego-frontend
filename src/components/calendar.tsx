@@ -333,8 +333,8 @@ export function Calendar() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      <div className="flex-1 flex flex-col bg-white sm:rounded-xl sm:shadow-xl overflow-hidden sm:border sm:border-gray-100 h-full md:shadow-lg shadow-md">
+    <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
+      <div className={`flex flex-col bg-white sm:rounded-xl sm:shadow-xl sm:border sm:border-gray-100 md:shadow-lg shadow-md ${isMobile ? 'flex-1 overflow-hidden' : ''}`} style={isMobile ? { minHeight: 0 } : {}}>
         {/* Header */}
         <div className="p-2 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-100/95 via-amber-100 to-amber-100/95 sm:shadow-sm shadow-sm">
           {/* Mobile: Layout Simplificado */}
@@ -541,7 +541,8 @@ export function Calendar() {
         />
         <div 
           ref={calendarContainerRef}
-          className="flex-1 p-0 sm:p-6 overflow-hidden relative overscroll-contain touch-pan-y h-full"
+          className={`flex-1 p-0 sm:p-6 relative ${isMobile ? 'touch-pan-y overflow-hidden' : ''}`}
+          style={{ minHeight: 0, height: isMobile ? '100%' : 'auto' }}
         >
           {/* Loading overlay sutil durante atualizações */}
           {isFetching && !isLoading && (
@@ -566,7 +567,6 @@ export function Calendar() {
             unselectAuto={false}
             selectMirror={true}
             selectOverlap={true}
-            height="100%"
             slotMinTime="07:00:00"
             slotMaxTime="23:00:00"
             allDaySlot={false}
@@ -594,8 +594,7 @@ export function Calendar() {
             nowIndicatorClassNames="border-red-500"
             moreLinkClassNames="text-amber-700 hover:text-amber-800 font-semibold"
             moreLinkContent={(args) => `+${args.num} mais`}
-            contentHeight="auto"
-            aspectRatio={isMobile ? undefined : 1.35}
+            contentHeight={isMobile ? undefined : "auto"}
             lazyFetching={true}
             eventDisplay="block"
             views={{
@@ -603,11 +602,13 @@ export function Calendar() {
                 titleFormat: { year: "numeric", month: "long", day: "numeric" },
                 slotMinTime: "08:00:00",
                 slotMaxTime: "22:00:00",
+                scrollTime: undefined,
               },
               timeGridWeek: {
                 titleFormat: { year: "numeric", month: "long" },
                 slotMinTime: "07:00:00",
                 slotMaxTime: "23:00:00",
+                scrollTime: undefined,
               },
             }}
             eventDidMount={(info) => {
