@@ -29,9 +29,28 @@ export function useCreateClassException() {
       ClassExceptionService.createClassException(classId, date, reason),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['class-exceptions', variables.classId] })
+      queryClient.invalidateQueries({ queryKey: ['all-class-exceptions'] })
       queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })
+}
+
+export function useAllClassExceptions(startDate?: string, endDate?: string) {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['all-class-exceptions', startDate, endDate],
+    queryFn: async () => {
+      const response = await ClassExceptionService.getAllClassExceptions(startDate, endDate)
+      return response.success ? response.data : []
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  })
+
+  return {
+    exceptions: data || [],
+    isLoading,
+    error: error?.message || null,
+    refetch,
+  }
 }
 
 export function useDeleteClassException() {
@@ -42,6 +61,7 @@ export function useDeleteClassException() {
       ClassExceptionService.deleteClassException(variables.id),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['class-exceptions', variables.classId] })
+      queryClient.invalidateQueries({ queryKey: ['all-class-exceptions'] })
       queryClient.invalidateQueries({ queryKey: ['events'] })
     },
   })

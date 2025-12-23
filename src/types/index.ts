@@ -101,6 +101,7 @@ export interface ClassException {
   date: string;
   reason?: string;
   className?: string;
+  classStyle?: string;
   createdAt?: string;
   updatedAt?: string;
 } 

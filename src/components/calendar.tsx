@@ -10,7 +10,8 @@ import { useEvents } from "../hooks/useEvents";
 import { useClasses } from "../hooks/useClasses";
 import { CALENDAR_COLORS } from "../constants/calendarColors";
 import { FULLCALENDAR_STYLES } from "./calendar.styles";
-import { CreateChoiceModal, EventModal, ClassModal } from "./calendar-modals";
+import { CreateChoiceModal, EventModal, ClassModal, ManagementModal } from "./calendar-modals";
+import { SettingsIcon } from "./icons";
 import { Class } from "../types";
 
 interface UserData {
@@ -100,6 +101,7 @@ export function Calendar() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+  const [isManagementModalOpen, setIsManagementModalOpen] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [calendarRef, setCalendarRef] = useState<FullCalendar | null>(null);
@@ -507,6 +509,16 @@ export function Calendar() {
                   Hoje
                 </button>
               )}
+              {canManage && (
+                <button
+                  onClick={() => setIsManagementModalOpen(true)}
+                  className="text-sm text-gray-700 hover:text-gray-900 font-semibold flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:bg-white hover:scale-105 hover:border hover:border-gray-300 active:scale-95"
+                  title="Gerenciar turmas desativadas e dias cancelados"
+                >
+                  <SettingsIcon className="w-4 h-4" />
+                  Gerenciar
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -684,6 +696,11 @@ export function Calendar() {
         }}
         classData={selectedClass}
         selectedDate={selectedDateForCreate}
+        canManage={canManage}
+      />
+      <ManagementModal
+        isOpen={isManagementModalOpen}
+        onClose={() => setIsManagementModalOpen(false)}
         canManage={canManage}
       />
     </div>

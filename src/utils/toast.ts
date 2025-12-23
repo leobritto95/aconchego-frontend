@@ -60,3 +60,10 @@ class ToastManager {
 
 export const toast = new ToastManager();
 
+/**
+ * Extrai mensagem de erro de forma segura
+ */
+export function getErrorMessage(error: unknown, defaultMessage: string): string {
+  return error instanceof Error ? error.message : defaultMessage;
+}
+

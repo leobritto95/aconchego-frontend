@@ -14,6 +14,14 @@ export class ClassExceptionService {
     return apiRequest<ClassException[]>('get', `/class-exceptions/class/${classId}`)
   }
 
+  static async getAllClassExceptions(startDate?: string, endDate?: string) {
+    const params = Object.fromEntries(
+      Object.entries({ startDate, endDate }).filter(([, value]) => value !== undefined)
+    ) as Record<string, string>;
+    
+    return apiRequest<ClassException[]>('get', '/class-exceptions/all', undefined, params)
+  }
+
   static async deleteClassException(id: string) {
     return apiRequest<{ success: boolean; data: boolean }>('delete', `/class-exceptions/${id}`)
   }

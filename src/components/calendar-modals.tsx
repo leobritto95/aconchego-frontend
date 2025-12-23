@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef, FormEvent } from "react";
 import { EventClickArg } from "@fullcalendar/core";
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from "../hooks/useEvents";
-import { useCreateClass, useUpdateClass, useDeleteClass } from "../hooks/useClasses";
-import { useClassExceptions, useCreateClassException, useDeleteClassException } from "../hooks/useClassException";
+import { useCreateClass, useUpdateClass, useDeleteClass, useClasses } from "../hooks/useClasses";
+import { useClassExceptions, useCreateClassException, useDeleteClassException, useAllClassExceptions } from "../hooks/useClassException";
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "../services/userService";
 import { Class, ScheduleTime } from "../types";
-import { toast } from "../utils/toast";
-import { formatDateTime, toDateTimeLocal } from "../utils/dateUtils";
+import { toast, getErrorMessage } from "../utils/toast";
+import { formatDateTime, toDateTimeLocal, normalizeDate, canCancelClass as canCancelClassUtil } from "../utils/dateUtils";
 import { DEFAULT_START_TIME, DEFAULT_END_TIME, DAYS_OF_WEEK, DAY_NAMES } from "../utils/constants";
 import { CloseIcon, ClockIcon, CalendarIcon, UserIcon, TagIcon, DocumentIcon, BookIcon } from "./icons";
 import { ConfirmModal } from "./confirm-modal";
@@ -227,8 +227,7 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
       setIsEditing(false);
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao salvar evento";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao salvar evento"));
     }
   };
 
@@ -241,8 +240,7 @@ export function EventModal({ isOpen, onClose, event, selectedDate, canManage }: 
       setShowDeleteConfirm(false);
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao excluir evento";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao excluir evento"));
     }
   };
 
@@ -517,7 +515,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
   const deleteMutation = useDeleteClass();
   
   const classId = classData ? (typeof classData.id === "string" ? classData.id : String(classData.id)) : null;
-  const { exceptions } = useClassExceptions(classId);
+  const { exceptions, refetch: refetchClassExceptions } = useClassExceptions(classId);
   const createExceptionMutation = useCreateClassException();
   const deleteExceptionMutation = useDeleteClassException();
   
@@ -530,6 +528,12 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
       return exDateStr === selectedDateStr;
     }) || null;
   }, [selectedDate, exceptions]);
+
+  // Verificar se a aula ainda não aconteceu (considerando data e horário)
+  const canCancelClass = useMemo(() => {
+    if (!selectedDate || !classData) return false;
+    return canCancelClassUtil(selectedDate, classData.scheduleTimes);
+  }, [selectedDate, classData]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -739,8 +743,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
       setIsEditing(false);
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao salvar turma";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao salvar turma"));
     }
   };
 
@@ -754,8 +757,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
       setShowDeleteConfirm(false);
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao excluir turma";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao excluir turma"));
     }
   };
 
@@ -771,8 +773,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
       setFormData({ ...formData, active: !formData.active });
       toast.success(`Turma ${!formData.active ? "ativada" : "desativada"} com sucesso!`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao alterar status da turma";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao alterar status da turma"));
     }
   };
 
@@ -786,12 +787,12 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         date: dateStr,
         reason: exceptionReason.trim() || undefined,
       });
+      await refetchClassExceptions();
       toast.success("Aula cancelada para esta data com sucesso!");
       setShowExceptionModal(false);
       setExceptionReason("");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao cancelar aula";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao cancelar aula"));
     }
   };
 
@@ -803,10 +804,10 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         id: selectedDateException.id,
         classId,
       });
+      await refetchClassExceptions();
       toast.success("Cancelamento removido com sucesso!");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao remover cancelamento";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Erro ao remover cancelamento"));
     }
   };
 
@@ -1159,7 +1160,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
               </div>
 
               {/* Seção de exceção para data específica */}
-              {canManage && selectedDate && (
+              {canManage && selectedDate && canCancelClass && (
                 <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-200">
                   <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1">
                     <CalendarIcon className="w-3 h-3" />
@@ -1308,5 +1309,201 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
         </div>
       )}
     </>
+  );
+}
+
+// Modal de Gerenciamento de Classes Desativadas e Exceções
+interface ManagementModalProps extends BaseModalProps {
+  canManage: boolean;
+}
+
+export function ManagementModal({ isOpen, onClose, canManage }: ManagementModalProps) {
+  const { classes, isLoading: isLoadingClasses } = useClasses();
+  const { exceptions, isLoading: isLoadingExceptions, refetch: refetchExceptions } = useAllClassExceptions();
+  const updateMutation = useUpdateClass();
+  const deleteExceptionMutation = useDeleteClassException();
+
+  const inactiveClasses = useMemo(() => {
+    return classes.filter((cls) => cls.active === false);
+  }, [classes]);
+
+  // Filtrar apenas exceções futuras (a partir de hoje)
+  const futureExceptions = useMemo(() => {
+    const today = normalizeDate(new Date());
+    return exceptions.filter((ex) => {
+      const exceptionDate = normalizeDate(ex.date);
+      return exceptionDate >= today;
+    });
+  }, [exceptions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
+
+  const handleReactivateClass = async (classId: string) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: classId,
+        classData: { active: true },
+      });
+      toast.success("Turma reativada com sucesso!");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Erro ao reativar turma"));
+    }
+  };
+
+  const handleRemoveException = async (exceptionId: string, classId: string) => {
+    try {
+      await deleteExceptionMutation.mutateAsync({
+        id: exceptionId,
+        classId,
+      });
+      await refetchExceptions();
+      toast.success("Dia reativado com sucesso!");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Erro ao reativar dia"));
+    }
+  };
+
+  if (!isOpen || !canManage) return null;
+
+  const isLoading = isLoadingClasses || isLoadingExceptions || updateMutation.isPending || deleteExceptionMutation.isPending;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl p-4 sm:p-6 max-w-4xl w-full shadow-2xl transform transition-all animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="management-title"
+      >
+        <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+          <div>
+            <h3 id="management-title" className="text-lg font-bold text-gray-900">
+              Gerenciar Turmas e Exceções
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">Reative turmas desativadas e dias cancelados futuros</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+            aria-label="Fechar"
+            disabled={isLoading}
+          >
+            <CloseIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        {isLoading && (inactiveClasses.length === 0 && futureExceptions.length === 0) ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Classes Desativadas */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <BookIcon className="w-4 h-4 text-gray-600" />
+                Turmas Desativadas ({inactiveClasses.length})
+              </h4>
+              {inactiveClasses.length === 0 ? (
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <p className="text-sm text-gray-600">Nenhuma turma desativada</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {inactiveClasses.map((cls) => (
+                    <div
+                      key={cls.id}
+                      className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">{cls.name}</p>
+                        {cls.style && (
+                          <p className="text-xs text-gray-600 mt-0.5">Estilo: {cls.style}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Desativada em: {cls.updatedAt ? new Date(cls.updatedAt).toLocaleDateString("pt-BR") : "N/A"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleReactivateClass(String(cls.id))}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow disabled:opacity-50 ml-3"
+                      >
+                        Reativar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Exceções de Datas */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-gray-600" />
+                Dias Cancelados Futuros ({futureExceptions.length})
+              </h4>
+              {futureExceptions.length === 0 ? (
+                <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
+                  <p className="text-sm text-gray-600">Nenhum dia cancelado no futuro</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {futureExceptions.map((exception) => (
+                    <div
+                      key={exception.id}
+                      className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-between"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {exception.className || "Turma"}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-xs text-gray-600">
+                            <span className="font-medium">Data:</span>{" "}
+                            {new Date(exception.date).toLocaleDateString("pt-BR")}
+                          </p>
+                          {exception.classStyle && (
+                            <p className="text-xs text-gray-600">
+                              <span className="font-medium">Estilo:</span> {exception.classStyle}
+                            </p>
+                          )}
+                        </div>
+                        {exception.reason && (
+                          <p className="text-xs text-gray-500 italic mt-1">
+                            Motivo: {exception.reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleRemoveException(exception.id, exception.classId)}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow disabled:opacity-50 ml-3"
+                      >
+                        Reativar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

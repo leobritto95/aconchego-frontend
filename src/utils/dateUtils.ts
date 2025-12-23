@@ -35,3 +35,51 @@ export function toDateTimeLocal(date: Date | string): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+/**
+ * Normaliza uma data removendo horas, minutos, segundos e milissegundos
+ */
+export function normalizeDate(date: Date | string): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+/**
+ * Verifica se uma aula pode ser cancelada baseado na data selecionada e horário da turma
+ */
+export function canCancelClass(
+  selectedDate: Date,
+  scheduleTimes?: Record<string, { startTime: string; endTime: string }>
+): boolean {
+  const now = new Date();
+  const selectedDateNormalized = normalizeDate(selectedDate);
+  const today = normalizeDate(now);
+
+  // Se a data é futura, pode cancelar
+  if (selectedDateNormalized > today) {
+    return true;
+  }
+
+  // Se a data é hoje, verificar o horário
+  if (selectedDateNormalized.getTime() === today.getTime()) {
+    const dayOfWeek = selectedDateNormalized.getDay();
+    const schedule = scheduleTimes?.[dayOfWeek.toString()];
+
+    // Se não tem horário definido para este dia, não pode cancelar
+    if (!schedule?.startTime) {
+      return false;
+    }
+
+    // Verificar se o horário de início da aula já passou
+    const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
+    const classStartTime = new Date(now);
+    classStartTime.setHours(startHour, startMinute, 0, 0);
+
+    // Se o horário de início ainda não passou, pode cancelar
+    return now < classStartTime;
+  }
+
+  // Se a data é passada, não pode cancelar
+  return false;
+}
+
