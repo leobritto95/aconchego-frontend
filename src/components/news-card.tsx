@@ -1,21 +1,47 @@
-export function NewsCard() {
+import { News } from "../types";
+
+interface NewsCardProps {
+  news: News;
+  onClick?: () => void;
+}
+
+export function NewsCard({ news, onClick }: NewsCardProps) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
   return (
     <div>
-      <a
-        href="#"
-        className="block p-6 bg-gray-100 border border-gray-400 rounded-lg shadow hover:bg-gray-200"
+      <div
+        onClick={onClick}
+        className={`block p-6 bg-white border border-amber-100 rounded-lg shadow hover:bg-amber-50 transition-colors ${
+          onClick ? "cursor-pointer" : ""
+        }`}
       >
-        <h5 className="mb-2 text-2xl font-bold tracking-tight">
-          Título notícia
-        </h5>
+        <div className="flex justify-between items-start mb-2">
+          <h5 className="text-2xl font-bold tracking-tight text-amber-900">
+            {news.title}
+          </h5>
+          <span className="text-sm text-gray-500 ml-4">
+            {formatDate(news.publishedAt)}
+          </span>
+        </div>
+        {news.author && (
+          <p className="text-sm text-gray-600 mb-3">Por: {news.author}</p>
+        )}
         <p className="font-normal text-gray-700">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-          aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit.
+          {news.content.length > 200
+            ? `${news.content.substring(0, 200)}...`
+            : news.content}
         </p>
-      </a>
+        {news.content.length > 200 && (
+          <p className="text-amber-900 text-sm font-medium mt-2">Ler mais →</p>
+        )}
+      </div>
     </div>
   );
 }
