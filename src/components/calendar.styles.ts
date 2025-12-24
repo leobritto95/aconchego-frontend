@@ -10,6 +10,7 @@ export const FULLCALENDAR_STYLES = `
     display: flex;
     flex-direction: column;
     min-height: 0;
+    flex: 1;
   }
   @media (min-width: 769px) {
     .fc {
@@ -236,13 +237,20 @@ export const FULLCALENDAR_STYLES = `
     color: #78350f;
   }
   @media (max-width: 768px) {
+    .fc {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+    }
     .fc-view-harness,
     .fc-view-harness-active {
       overflow: hidden !important;
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
     }
     .fc-scrollgrid {
       border: none;
       -webkit-overflow-scrolling: touch;
+      height: 100% !important;
     }
     .fc-scrollgrid-section {
       border-left: none;

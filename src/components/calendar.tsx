@@ -334,7 +334,7 @@ export function Calendar() {
 
   return (
     <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-      <div className={`flex flex-col bg-white sm:rounded-xl sm:shadow-xl sm:border sm:border-gray-100 md:shadow-lg shadow-md ${isMobile ? 'flex-1 overflow-hidden' : ''}`} style={isMobile ? { minHeight: 0 } : {}}>
+      <div className={`flex flex-col bg-white sm:rounded-xl sm:shadow-xl sm:border sm:border-gray-100 md:shadow-lg shadow-md ${isMobile ? 'flex-1 overflow-hidden h-full' : ''}`} style={isMobile ? { minHeight: 0 } : {}}>
         {/* Header */}
         <div className="p-2 sm:p-6 border-b border-amber-200/50 bg-gradient-to-r from-amber-100/95 via-amber-100 to-amber-100/95 sm:shadow-sm shadow-sm">
           {/* Mobile: Layout Simplificado */}
@@ -541,8 +541,8 @@ export function Calendar() {
         />
         <div 
           ref={calendarContainerRef}
-          className={`flex-1 p-0 sm:p-6 relative ${isMobile ? 'touch-pan-y overflow-hidden' : ''}`}
-          style={{ minHeight: 0, height: isMobile ? '100%' : 'auto' }}
+          className={`flex-1 p-0 sm:p-6 relative ${isMobile ? 'touch-pan-y overflow-hidden flex flex-col' : ''}`}
+          style={{ minHeight: 0 }}
         >
           {/* Loading overlay sutil durante atualizações */}
           {isFetching && !isLoading && (
