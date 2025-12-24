@@ -89,7 +89,7 @@ export function ClassCard({
         <div className="flex gap-2 pt-2 border-t border-gray-100">
           <button
             onClick={() => onManageStudents(classItem)}
-            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium text-xs"
+            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs"
           >
             <FiUsers size={14} />
             Alunos
@@ -103,7 +103,7 @@ export function ClassCard({
           </button>
           <button
             onClick={() => onEdit(classItem)}
-            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium text-xs"
+            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-medium text-xs"
           >
             <FiEdit2 size={14} />
             Editar
@@ -177,7 +177,7 @@ export function ClassCard({
       <div className="flex gap-2 pt-3 border-t border-gray-100 mt-auto">
         <button
           onClick={() => onManageStudents(classItem)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium text-xs"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs"
         >
           <FiUsers size={14} />
           Alunos
@@ -191,7 +191,7 @@ export function ClassCard({
         </button>
         <button
           onClick={() => onEdit(classItem)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium text-xs"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-medium text-xs"
         >
           <FiEdit2 size={14} />
           Editar
