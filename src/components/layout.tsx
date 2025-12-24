@@ -27,8 +27,8 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
         </header>
-        <main className="flex-1 min-h-0 overflow-hidden md:overflow-y-auto bg-zinc-100 md:bg-zinc-100">
-          <div className="h-full md:min-h-full flex flex-col p-0 pt-0 pb-[72px] md:p-4 md:pt-6 md:pb-4" style={{ minHeight: 0 }}>
+        <main className="flex-1 min-h-0 overflow-y-auto bg-zinc-100 md:bg-zinc-100">
+          <div className="flex flex-col p-0 pt-0 pb-[72px] md:p-4 md:pt-6 md:pb-4" style={{ minHeight: '100%', height: 'auto' }}>
             {children}
           </div>
         </main>
