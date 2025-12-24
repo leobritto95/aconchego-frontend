@@ -26,6 +26,7 @@
     "react-router-dom": "^7.0.1"
   },
   "devDependencies": {
+    "react-grab": "^0.0.93",
     "@eslint/js": "^9.15.0",
     "@types/node": "^24.0.3",
     "@types/react": "^18.3.12",
