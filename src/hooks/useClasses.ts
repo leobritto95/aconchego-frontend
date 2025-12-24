@@ -78,3 +78,29 @@ export function useDeleteClass() {
   })
 }
 
+export function useAddStudentToClass() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ classId, studentId }: { classId: string; studentId: string }) =>
+      ClassService.addStudentToClass(classId, studentId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['class', variables.classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
+    },
+  })
+}
+
+export function useRemoveStudentFromClass() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ classId, studentId }: { classId: string; studentId: string }) =>
+      ClassService.removeStudentFromClass(classId, studentId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['class', variables.classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
+    },
+  })
+}
+

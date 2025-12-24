@@ -1,4 +1,4 @@
-import { FileUser, House, Newspaper, Receipt, CreditCard, Users, LucideIcon } from "lucide-react";
+import { FileUser, House, Newspaper, Receipt, CreditCard, Users, BookOpen, LucideIcon } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
@@ -13,6 +13,7 @@ interface MenuItem {
 const baseMenuItems: MenuItem[] = [
   { id: "home", path: "/", label: "Inicio", icon: House },
   { id: "users", path: "/users", label: "Usuários", icon: Users, roles: ["secretary", "admin"] },
+  { id: "classes", path: "/classes", label: "Turmas", icon: BookOpen, roles: ["secretary", "admin"] },
   { id: "payment", path: "/payment", label: "Pagamento", icon: Receipt },
   { id: "feedback", path: "/feedback", label: "Feedback", icon: FileUser },
   { id: "news", path: "/news", label: "Noticias", icon: Newspaper },
