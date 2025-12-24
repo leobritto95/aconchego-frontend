@@ -1,17 +1,22 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { FiEdit2, FiPlus, FiSearch, FiX, FiBook, FiUsers, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiSearch, FiX, FiBook, FiUsers, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiClock, FiMessageSquare, FiCheck } from "react-icons/fi";
 import { useClasses, useAddStudentToClass, useRemoveStudentFromClass, useDeleteClass, useClassById } from "../hooks/useClasses";
+import { useClassExceptions, useDeleteClassException, useCreateClassException } from "../hooks/useClassException";
 import { ClassService } from "../services/classService";
 import { toast, getErrorMessage } from "../utils/toast";
 import { useAuth } from "../hooks/useAuth";
-import { Class } from "../types";
+import { Class, ScheduleTime } from "../types";
 import { DAY_NAMES } from "../utils/constants";
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "../services/userService";
 import { ClassModal } from "../components/calendar-modals";
 import { ConfirmModal } from "../components/confirm-modal";
+import { normalizeDate, formatDate } from "../utils/dateUtils";
 
 const DEBOUNCE_DELAY = 300; // ms
+const MAX_UPCOMING_CLASS_DATES = 20; // Limite de próximas aulas a exibir
+const MAX_SEARCH_MONTHS = 6; // Meses no futuro para buscar aulas
+const MS_PER_DAY = 1000 * 60 * 60 * 24; // Milissegundos em um dia
 
 export function Classes() {
   const { user: currentUser } = useAuth();
@@ -20,13 +25,24 @@ export function Classes() {
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isManageStudentsModalOpen, setIsManageStudentsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
+  const [isCreateExceptionModalOpen, setIsCreateExceptionModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [exceptionsFilter, setExceptionsFilter] = useState<string>("future"); // "all", "future", "past"
+  const [selectedClassDate, setSelectedClassDate] = useState<string | null>(null);
+  const [newExceptionReason, setNewExceptionReason] = useState("");
 
   const { classes, isLoading, refetch } = useClasses();
   const addStudentMutation = useAddStudentToClass();
   const removeStudentMutation = useRemoveStudentFromClass();
   const deleteClassMutation = useDeleteClass();
+  const deleteExceptionMutation = useDeleteClassException();
+  const createExceptionMutation = useCreateClassException();
+
+  // Buscar exceções da turma selecionada
+  const selectedClassId = isExceptionsModalOpen && selectedClass ? String(selectedClass.id) : null;
+  const { exceptions, isLoading: isLoadingExceptions, refetch: refetchExceptions } = useClassExceptions(selectedClassId);
 
   // Buscar professores
   const { data: teachersData } = useQuery({
@@ -93,16 +109,22 @@ export function Classes() {
         if (isManageStudentsModalOpen) {
           setIsManageStudentsModalOpen(false);
         }
+        if (isExceptionsModalOpen) {
+          setIsExceptionsModalOpen(false);
+        }
+        if (isCreateExceptionModalOpen) {
+          setIsCreateExceptionModalOpen(false);
+        }
       }
     };
 
-    if (isManageStudentsModalOpen) {
+    if (isManageStudentsModalOpen || isExceptionsModalOpen || isCreateExceptionModalOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => {
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [isManageStudentsModalOpen]);
+  }, [isManageStudentsModalOpen, isExceptionsModalOpen, isCreateExceptionModalOpen]);
 
   // Função helper para formatar dias e horários
   const formatSchedule = (classItem: Class) => {
@@ -186,6 +208,42 @@ export function Classes() {
     setIsManageStudentsModalOpen(true);
   };
 
+  const handleOpenExceptionsModal = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setExceptionsFilter("future");
+    setIsExceptionsModalOpen(true);
+  };
+
+  const handleOpenCreateExceptionModal = () => {
+    setSelectedClassDate(null);
+    setNewExceptionReason("");
+    setIsCreateExceptionModalOpen(true);
+  };
+
+  const handleSelectClassDate = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    setSelectedClassDate(dateStr);
+  };
+
+  const handleCreateException = async () => {
+    if (!selectedClass || !selectedClassDate) return;
+
+    try {
+      await createExceptionMutation.mutateAsync({
+        classId: String(selectedClass.id),
+        date: selectedClassDate,
+        reason: newExceptionReason || undefined,
+      });
+      toast.success("Cancelamento criado com sucesso!");
+      setIsCreateExceptionModalOpen(false);
+      setSelectedClassDate(null);
+      setNewExceptionReason("");
+      await refetchExceptions();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Erro ao criar cancelamento"));
+    }
+  };
+
   const handleOpenDeleteModal = (classItem: Class) => {
     setSelectedClass(classItem);
     setIsDeleteModalOpen(true);
@@ -242,6 +300,104 @@ export function Classes() {
       toast.error(getErrorMessage(error, "Erro ao remover aluno"));
     }
   };
+
+  const handleRemoveException = async (exceptionId: string) => {
+    if (!selectedClass) return;
+
+    try {
+      await deleteExceptionMutation.mutateAsync({
+        id: exceptionId,
+        classId: String(selectedClass.id),
+      });
+      toast.success("Dia reativado com sucesso!");
+      await refetchExceptions();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Erro ao reativar dia"));
+    }
+  };
+
+  // Separar exceções futuras e passadas
+  const futureExceptions = useMemo(() => {
+    const today = normalizeDate(new Date());
+    return exceptions.filter((ex) => {
+      const exceptionDate = normalizeDate(ex.date);
+      return exceptionDate >= today;
+    });
+  }, [exceptions]);
+
+  const pastExceptions = useMemo(() => {
+    const today = normalizeDate(new Date());
+    return exceptions.filter((ex) => {
+      const exceptionDate = normalizeDate(ex.date);
+      return exceptionDate < today;
+    });
+  }, [exceptions]);
+
+  // Filtrar exceções baseado no filtro selecionado
+  const filteredExceptions = useMemo(() => {
+    if (exceptionsFilter === "future") {
+      return futureExceptions;
+    } else if (exceptionsFilter === "past") {
+      return pastExceptions;
+    } else {
+      return exceptions;
+    }
+  }, [exceptions, futureExceptions, pastExceptions, exceptionsFilter]);
+
+  // Calcular próximas aulas programadas
+  const upcomingClassDates = useMemo(() => {
+    if (!selectedClass || !selectedClass.recurringDays || selectedClass.recurringDays.length === 0) {
+      return [];
+    }
+
+    const today = normalizeDate(new Date());
+    const startDate = selectedClass.startDate ? normalizeDate(new Date(selectedClass.startDate)) : today;
+    const endDate = selectedClass.endDate ? normalizeDate(new Date(selectedClass.endDate)) : null;
+    
+    // Criar set de datas já canceladas
+    const cancelledDates = new Set(
+      exceptions.map((ex) => new Date(ex.date).toISOString().split("T")[0])
+    );
+
+    const upcomingDates: Array<{ date: Date; dayOfWeek: number; schedule?: ScheduleTime }> = [];
+    const initialDate = startDate > today ? startDate : today;
+    const maxDate = new Date(today.getTime() + MAX_SEARCH_MONTHS * 30 * MS_PER_DAY);
+    
+    // Buscar próximas aulas até atingir o limite
+    for (let dayOffset = 0; upcomingDates.length < MAX_UPCOMING_CLASS_DATES; dayOffset++) {
+      const currentDate = new Date(initialDate);
+      currentDate.setDate(initialDate.getDate() + dayOffset);
+      
+      // Limitar busca até MAX_SEARCH_MONTHS meses no futuro
+      if (currentDate > maxDate) {
+        break;
+      }
+
+      // Verificar se passou da endDate
+      if (endDate && currentDate > endDate) {
+        break;
+      }
+
+      const dayOfWeek = currentDate.getDay();
+      
+      // Verificar se este dia da semana tem aula
+      if (selectedClass.recurringDays.includes(dayOfWeek)) {
+        const dateStr = currentDate.toISOString().split("T")[0];
+        
+        // Verificar se não está cancelada
+        if (!cancelledDates.has(dateStr)) {
+          const schedule = selectedClass.scheduleTimes?.[dayOfWeek.toString()] as ScheduleTime | undefined;
+          upcomingDates.push({
+            date: new Date(currentDate),
+            dayOfWeek,
+            schedule,
+          });
+        }
+      }
+    }
+
+    return upcomingDates;
+  }, [selectedClass, exceptions]);
 
   // Alunos disponíveis
   const availableStudents = availableStudentsData?.data || [];
@@ -454,6 +610,13 @@ export function Classes() {
                       Alunos
                     </button>
                     <button
+                      onClick={() => handleOpenExceptionsModal(classItem)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
+                    >
+                      <FiCalendar size={14} />
+                      Cancelamentos
+                    </button>
+                    <button
                       onClick={() => handleOpenEditModal(classItem)}
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium text-xs"
                     >
@@ -538,6 +701,13 @@ export function Classes() {
                     >
                       <FiUsers size={14} />
                       Alunos
+                    </button>
+                    <button
+                      onClick={() => handleOpenExceptionsModal(classItem)}
+                      className="flex-1 flex items-center justify-center gap-1.5 p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
+                    >
+                      <FiCalendar size={14} />
+                      Cancelamentos
                     </button>
                     <button
                       onClick={() => handleOpenEditModal(classItem)}
@@ -668,6 +838,327 @@ export function Classes() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cancelamentos */}
+      {isExceptionsModalOpen && selectedClass && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-[100] animate-in fade-in"
+          onClick={() => setIsExceptionsModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 relative z-[101]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+              <div className="flex-1 min-w-0 pr-2">
+                <h2 className="text-lg md:text-2xl font-bold text-amber-900">Cancelamentos</h2>
+                <p className="text-gray-600 text-xs md:text-sm mt-0.5">{selectedClass.name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenCreateExceptionModal}
+                  className="flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-amber-800 transition-all font-medium text-xs md:text-sm shadow-md hover:shadow-lg flex-shrink-0"
+                >
+                  <FiPlus size={16} className="md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">Adicionar</span>
+                </button>
+                <button
+                  onClick={() => setIsExceptionsModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-all flex-shrink-0"
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
+            </div>
+
+            {isLoadingExceptions ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-900 mx-auto mb-3"></div>
+                <p className="text-gray-600 font-medium text-sm">Carregando cancelamentos...</p>
+              </div>
+            ) : exceptions.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200">
+                <FiCalendar className="mx-auto text-gray-300 mb-3 w-10 h-10" />
+                <p className="text-gray-600 mb-2 font-medium">Nenhum cancelamento encontrado</p>
+                <p className="text-gray-500 text-sm">
+                  Não há datas canceladas para esta turma
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Filtro Radio Buttons */}
+                <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="exceptionsFilter"
+                      value="future"
+                      checked={exceptionsFilter === "future"}
+                      onChange={(e) => setExceptionsFilter(e.target.value)}
+                      className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Datas futuras
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="exceptionsFilter"
+                      value="all"
+                      checked={exceptionsFilter === "all"}
+                      onChange={(e) => setExceptionsFilter(e.target.value)}
+                      className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Todas
+                    </span>
+                  </label>
+                </div>
+
+                {filteredExceptions.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200">
+                    <FiCalendar className="mx-auto text-gray-300 mb-3 w-10 h-10" />
+                    <p className="text-gray-600 mb-2 font-medium">Nenhum cancelamento encontrado</p>
+                    <p className="text-gray-500 text-sm">
+                      Não há cancelamentos {exceptionsFilter === "future" ? "futuros" : exceptionsFilter === "past" ? "passados" : ""} para esta turma
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredExceptions.map((exception) => {
+                      const isFuture = futureExceptions.some((ex) => ex.id === exception.id);
+                      return (
+                        <div
+                          key={exception.id}
+                          className={`bg-gray-50 rounded-lg p-3 md:p-4 border border-gray-200 ${isFuture ? "flex items-center justify-between" : ""}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="text-sm md:text-base font-semibold text-gray-900">
+                                {formatDate(exception.date)}
+                              </p>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                isFuture
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}>
+                                {isFuture ? "Cancelada" : "Passada"}
+                              </span>
+                            </div>
+                            <p className="text-xs md:text-sm text-gray-600 italic mt-1">
+                              Motivo: {exception.reason || "Não informado"}
+                            </p>
+                          </div>
+                          {isFuture && (
+                            <button
+                              onClick={() => handleRemoveException(exception.id)}
+                              disabled={deleteExceptionMutation.isPending}
+                              className="ml-3 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                              Reativar
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Criar Cancelamento */}
+      {isCreateExceptionModalOpen && selectedClass && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-4 z-[110] animate-in fade-in"
+          onClick={() => setIsCreateExceptionModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-6 max-w-md w-full animate-in zoom-in-95 relative z-[111]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <FiXCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900">Adicionar Cancelamento</h3>
+                </div>
+                <p className="text-gray-600 text-xs md:text-sm mt-0.5 ml-7">{selectedClass.name}</p>
+              </div>
+              <button
+                onClick={() => setIsCreateExceptionModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-all flex-shrink-0"
+                disabled={createExceptionMutation.isPending}
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                  <FiCalendar className="w-4 h-4 text-amber-600" />
+                  Selecione uma aula para cancelar <span className="text-red-500">*</span>
+                </label>
+                
+                {upcomingClassDates.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center border border-gray-200">
+                    <FiCalendar className="mx-auto text-gray-300 mb-2 w-8 h-8" />
+                    <p className="text-sm text-gray-600">Não há aulas futuras disponíveis para cancelar</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    {upcomingClassDates.map((classDate) => {
+                      const dateStr = classDate.date.toISOString().split("T")[0];
+                      const isSelected = selectedClassDate === dateStr;
+                      const dayName = DAY_NAMES[classDate.dayOfWeek];
+                      const schedule = classDate.schedule;
+                      
+                      // Calcular informações da data
+                      const today = normalizeDate(new Date());
+                      const classDateNormalized = normalizeDate(classDate.date);
+                      const daysUntil = Math.ceil((classDateNormalized.getTime() - today.getTime()) / MS_PER_DAY);
+                      const isToday = daysUntil === 0;
+                      const isTomorrow = daysUntil === 1;
+                      
+                      // Verificar semana atual
+                      const currentDayOfWeek = today.getDay();
+                      const daysUntilSunday = 7 - currentDayOfWeek;
+                      const isInCurrentWeek = daysUntil > 0 && daysUntil <= daysUntilSunday;
+                      
+                      // Verificar próxima semana
+                      const nextMonday = new Date(today);
+                      nextMonday.setDate(today.getDate() + daysUntilSunday + 1);
+                      const nextSunday = new Date(nextMonday);
+                      nextSunday.setDate(nextMonday.getDate() + 6);
+                      const isInNextWeek = classDateNormalized >= normalizeDate(nextMonday) && classDateNormalized <= normalizeDate(nextSunday);
+
+                      return (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() => handleSelectClassDate(classDate.date)}
+                          disabled={createExceptionMutation.isPending}
+                          className={`w-full text-left p-3 md:p-3.5 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? "border-amber-500 bg-amber-50 shadow-md ring-2 ring-amber-200"
+                              : "border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50/50"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                isSelected ? "bg-amber-500" : "bg-gray-100"
+                              }`}>
+                                <FiCalendar className={`w-5 h-5 ${isSelected ? "text-white" : "text-gray-600"}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <p className="font-semibold text-gray-900 text-sm md:text-base">
+                                  {formatDate(classDate.date)}
+                                </p>
+                                <span className="text-xs text-gray-600 font-medium">
+                                  {dayName}
+                                </span>
+                                {(isToday || isTomorrow) && (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                    isToday 
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-purple-100 text-purple-700"
+                                  }`}>
+                                    {isToday ? "Hoje" : "Amanhã"}
+                                  </span>
+                                )}
+                                {!isToday && !isTomorrow && isInCurrentWeek && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                    {daysUntil === 1 ? "1 dia" : `${daysUntil} dias`}
+                                  </span>
+                                )}
+                                {isInNextWeek && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                    Próxima semana
+                                  </span>
+                                )}
+                              </div>
+                              {schedule ? (
+                                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                  <FiClock className="w-3.5 h-3.5" />
+                                  <span>{schedule.startTime} - {schedule.endTime}</span>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-500 italic">Sem horário definido</p>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <div className="flex-shrink-0">
+                                <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                                  <FiCheckCircle className="w-4 h-4 text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <label htmlFor="exceptionReason" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <FiMessageSquare className="w-4 h-4 text-amber-600" />
+                  Motivo do cancelamento <span className="text-gray-500 text-xs font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  id="exceptionReason"
+                  value={newExceptionReason}
+                  onChange={(e) => setNewExceptionReason(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 md:px-4 py-2 md:py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all resize-none"
+                  placeholder="Ex: Feriado, professor ausente, manutenção..."
+                  disabled={createExceptionMutation.isPending}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateExceptionModalOpen(false);
+                    setSelectedClassDate(null);
+                    setNewExceptionReason("");
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                  disabled={createExceptionMutation.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateException}
+                  disabled={createExceptionMutation.isPending || !selectedClassDate}
+                  className="px-4 py-2.5 text-sm font-medium text-white bg-amber-900 rounded-lg hover:bg-amber-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {createExceptionMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Criando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiCheck className="w-4 h-4" />
+                      <span>Confirmar cancelamento</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
