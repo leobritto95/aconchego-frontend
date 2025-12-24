@@ -632,7 +632,7 @@ export function Users() {
           onClick={() => !createUserMutation.isPending && setIsCreateModalOpen(false)}
         >
           <div
-            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto animate-in zoom-in-95 relative z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4 md:mb-6 pb-3 md:pb-4 border-b border-gray-200">
@@ -730,14 +730,14 @@ export function Users() {
                     <p className="text-gray-500 text-xs md:text-sm py-2 md:py-3 bg-gray-50 rounded-lg px-3 md:px-4">Nenhuma turma disponível</p>
                   ) : (
                     <div className="space-y-2">
-                      <div className="relative">
-                        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <div className="relative z-10">
+                        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                         <input
                           type="text"
                           placeholder="Buscar turmas..."
                           value={classSearchTerm}
                           onChange={(e) => setClassSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all text-sm"
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all text-sm bg-white"
                         />
                         {classSearchTerm && (
                           <button
@@ -810,7 +810,7 @@ export function Users() {
           onClick={() => !updateUserMutation.isPending && setIsEditModalOpen(false)}
         >
           <div
-            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-8 max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto animate-in zoom-in-95 relative z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4 md:mb-6 pb-3 md:pb-4 border-b border-gray-200">
