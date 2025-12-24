@@ -10,6 +10,7 @@ import { FeedbackDetails } from "./pages/feedback-details";
 import { ClassFeedbacks } from "./pages/class-feedbacks";
 import { StudentClassFeedbacksPage } from "./pages/student-class-feedbacks";
 import { Users } from "./pages/users";
+import { Classes } from "./pages/classes";
 import { Layout } from "./components/layout";
 import { Login } from "./pages/Login";
 import { ToastContainer } from "./components/toast";
@@ -83,6 +84,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Users />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/classes",
+    element: (
+      <ProtectedRoute>
+        <Classes />
       </ProtectedRoute>
     ),
   },

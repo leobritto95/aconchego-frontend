@@ -23,6 +23,19 @@ export interface Class {
   scheduleTimes: Record<string, ScheduleTime>; // { "2": { startTime: "19:00", endTime: "21:00" }, ... }
   startDate: string; // Data de início da recorrência (ou data única da classe)
   endDate?: string | null; // Data de fim (null = sem limite)
+  studentsCount?: number;
+  attendanceCount?: number;
+  students?: Array<{
+    id: string;
+    studentId: string;
+    student: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    } | null;
+    registeredAt: string;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }

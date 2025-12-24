@@ -83,3 +83,69 @@ export function canCancelClass(
   return false;
 }
 
+/**
+ * Calcula informações de badge contextual para uma data
+ */
+export interface DateBadgeInfo {
+  type: "today" | "tomorrow" | "days" | "nextWeek" | null;
+  label: string;
+  className: string;
+}
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+export function getDateBadgeInfo(date: Date, today: Date = normalizeDate(new Date())): DateBadgeInfo {
+  const dateNormalized = normalizeDate(date);
+  const daysUntil = Math.ceil((dateNormalized.getTime() - today.getTime()) / MS_PER_DAY);
+
+  if (daysUntil === 0) {
+    return {
+      type: "today",
+      label: "Hoje",
+      className: "bg-blue-100 text-blue-700",
+    };
+  }
+
+  if (daysUntil === 1) {
+    return {
+      type: "tomorrow",
+      label: "Amanhã",
+      className: "bg-purple-100 text-purple-700",
+    };
+  }
+
+  // Verificar se está na semana atual
+  const currentDayOfWeek = today.getDay();
+  const daysUntilSunday = 7 - currentDayOfWeek;
+  const isInCurrentWeek = daysUntil > 0 && daysUntil <= daysUntilSunday;
+
+  if (isInCurrentWeek) {
+    return {
+      type: "days",
+      label: daysUntil === 1 ? "1 dia" : `${daysUntil} dias`,
+      className: "bg-green-100 text-green-700",
+    };
+  }
+
+  // Verificar se está na próxima semana
+  const nextMonday = new Date(today);
+  nextMonday.setDate(today.getDate() + daysUntilSunday + 1);
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextMonday.getDate() + 6);
+  const isInNextWeek = dateNormalized >= normalizeDate(nextMonday) && dateNormalized <= normalizeDate(nextSunday);
+
+  if (isInNextWeek) {
+    return {
+      type: "nextWeek",
+      label: "Próxima semana",
+      className: "bg-indigo-100 text-indigo-700",
+    };
+  }
+
+  return {
+    type: null,
+    label: "",
+    className: "",
+  };
+}
+

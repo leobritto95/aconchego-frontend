@@ -478,6 +478,7 @@ interface ClassModalProps extends BaseModalProps {
   classData: Class | null;
   selectedDate?: Date;
   canManage: boolean;
+  initialEditMode?: boolean; // Se true, abre direto no modo de edição
 }
 
 const initialClassFormData = {
@@ -492,8 +493,8 @@ const initialClassFormData = {
   endDate: "",
 };
 
-export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage }: ClassModalProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage, initialEditMode = false }: ClassModalProps) {
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showExceptionModal, setShowExceptionModal] = useState(false);
   const [exceptionReason, setExceptionReason] = useState("");
@@ -557,13 +558,20 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setIsEditing(false);
+      setIsEditing(initialEditMode);
       setFormData(initialClassFormData);
       setShowDeleteConfirm(false);
       setShowExceptionModal(false);
       setExceptionReason("");
     }
-  }, [isOpen]);
+  }, [isOpen, initialEditMode]);
+
+  // Quando o modal abre, se initialEditMode for true, já ativa o modo de edição
+  useEffect(() => {
+    if (isOpen && initialEditMode && classData) {
+      setIsEditing(true);
+    }
+  }, [isOpen, initialEditMode, classData]);
 
   // Load class data
   useEffect(() => {
@@ -1061,8 +1069,12 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
                 <button
                   type="button"
                   onClick={() => {
-                    setIsEditing(false);
-                    if (!classData) onClose();
+                    if (initialEditMode) {
+                      onClose();
+                    } else {
+                      setIsEditing(false);
+                      if (!classData) onClose();
+                    }
                   }}
                   className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
                   disabled={isLoading}

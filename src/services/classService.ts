@@ -21,5 +21,21 @@ export class ClassService {
   static async deleteClass(id: string) {
     return apiRequest<{ id: string; name: string }>('delete', `/classes/${id}`)
   }
+
+  static async addStudentToClass(classId: string, studentId: string) {
+    return apiRequest<{ id: string; classId: string; studentId: string }>('post', `/classes/${classId}/student`, { studentId })
+  }
+
+  static async removeStudentFromClass(classId: string, studentId: string) {
+    return apiRequest<{ success: boolean }>('delete', `/classes/${classId}/student/${studentId}`)
+  }
+
+  static async getAvailableStudents(classId: string, params?: { search?: string; page?: number; limit?: number }) {
+    const queryParams: any = {}
+    if (params?.search) queryParams.search = params.search
+    if (params?.page) queryParams.page = params.page
+    if (params?.limit) queryParams.limit = params.limit
+    return apiRequest<{ data: any[]; page: number; limit: number; total: number; totalPages: number }>('get', `/classes/${classId}/available-students`, undefined, queryParams)
+  }
 }
 
