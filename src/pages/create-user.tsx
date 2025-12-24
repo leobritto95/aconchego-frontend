@@ -159,7 +159,7 @@ export function CreateUser() {
             >
               <option value="student">Aluno</option>
               <option value="teacher">Professor</option>
-              <option value="secretary">Secretaria</option>
+              <option value="secretary">Secretário(a)</option>
               {user.role === "admin" && <option value="admin">Administrador</option>}
             </select>
           </div>

@@ -260,7 +260,7 @@ export function Users() {
     const labels: Record<string, string> = {
       student: "Aluno",
       teacher: "Professor",
-      secretary: "Secretaria",
+      secretary: "Secretário(a)",
       admin: "Administrador",
     };
     return labels[role] || role;
@@ -349,7 +349,7 @@ export function Users() {
           <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="text-gray-600 text-[10px] md:text-sm font-medium mb-0.5 md:mb-1 truncate">Secretaria</p>
+                <p className="text-gray-600 text-[10px] md:text-sm font-medium mb-0.5 md:mb-1 truncate">Secretários(as)</p>
                 <p className="text-lg md:text-3xl font-bold text-purple-600">{stats.secretaries}</p>
               </div>
               <div className="bg-purple-100 p-1.5 md:p-3 rounded-md md:rounded-lg flex-shrink-0 ml-1">
@@ -407,7 +407,7 @@ export function Users() {
             <option value="">Todos os tipos</option>
             <option value="student">Aluno</option>
             <option value="teacher">Professor</option>
-            <option value="secretary">Secretaria</option>
+            <option value="secretary">Secretário(a)</option>
             {currentUser.role === "admin" && <option value="admin">Administrador</option>}
           </select>
         </div>
@@ -711,7 +711,7 @@ export function Users() {
                 >
                   <option value="student">Aluno</option>
                   <option value="teacher">Professor</option>
-                  <option value="secretary">Secretaria</option>
+                  <option value="secretary">Secretário(a)</option>
                   {currentUser.role === "admin" && <option value="admin">Administrador</option>}
                 </select>
               </div>
@@ -890,7 +890,7 @@ export function Users() {
                 >
                   <option value="student">Aluno</option>
                   <option value="teacher">Professor</option>
-                  <option value="secretary">Secretaria</option>
+                  <option value="secretary">Secretário(a)</option>
                   {currentUser.role === "admin" && <option value="admin">Administrador</option>}
                 </select>
               </div>
