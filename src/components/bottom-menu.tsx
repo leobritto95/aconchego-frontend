@@ -39,25 +39,30 @@ export function BottomMenu() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-stone-50 shadow-[0_-3px_2px_0_rgb(0,0,0,0.05)] h-[72px]">
-      <div className="flex justify-around items-center py-2 px-2 h-full">
-        {menuItems.map((item) => {
-          const active = isActive(item.path);
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              className={`flex flex-col items-center flex-1 p-1 ${
-                active ? "bg-amber-100 font-bold" : "hover:bg-gray-200"
-              }`}
-              onClick={() => navigate(item.path)}
-            >
-              <Icon className={active ? "text-amber-900" : "text-gray-700"} />
-              <span className={`text-sm mt-1 ${active ? "text-amber-900 font-bold" : "text-gray-700"}`}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+      <div 
+        className="flex items-center py-2 px-2 h-full overflow-x-auto scrollbar-hide scroll-smooth"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className="flex items-center gap-1 min-w-max">
+          {menuItems.map((item) => {
+            const active = isActive(item.path);
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={`flex flex-col items-center justify-center min-w-[70px] px-2 py-1 rounded-lg transition-colors ${
+                  active ? "bg-amber-100 font-bold" : "hover:bg-gray-200"
+                }`}
+                onClick={() => navigate(item.path)}
+              >
+                <Icon className={`w-5 h-5 ${active ? "text-amber-900" : "text-gray-700"}`} />
+                <span className={`text-xs mt-1 whitespace-nowrap ${active ? "text-amber-900 font-bold" : "text-gray-700"}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
