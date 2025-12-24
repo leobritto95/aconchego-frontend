@@ -1,15 +1,18 @@
-import { FileUser, House, Newspaper, Receipt, CreditCard, LucideIcon } from "lucide-react";
+import { FileUser, House, Newspaper, Receipt, CreditCard, Users, LucideIcon } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 interface MenuItem {
   id: string;
   path: string;
   label: string;
   icon: LucideIcon;
+  roles?: ("secretary" | "admin")[];
 }
 
-const menuItems: MenuItem[] = [
+const baseMenuItems: MenuItem[] = [
   { id: "home", path: "/", label: "Inicio", icon: House },
+  { id: "users", path: "/users", label: "Usuários", icon: Users, roles: ["secretary", "admin"] },
   { id: "payment", path: "/payment", label: "Pagamento", icon: Receipt },
   { id: "feedback", path: "/feedback", label: "Feedback", icon: FileUser },
   { id: "news", path: "/news", label: "Noticias", icon: Newspaper },
@@ -19,6 +22,13 @@ const menuItems: MenuItem[] = [
 export function BottomMenu() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Filtrar itens do menu baseado nas permissões do usuário
+  const menuItems = baseMenuItems.filter((item) => {
+    if (!item.roles) return true; // Item sem restrição de role
+    return user && item.roles.includes(user.role as "secretary" | "admin");
+  });
 
   function isActive(path: string) {
     if (path === "/" && location.pathname === "/") return true;
