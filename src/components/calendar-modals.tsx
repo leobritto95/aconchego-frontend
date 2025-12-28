@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo, useRef, FormEvent } from "react";
 import { EventClickArg } from "@fullcalendar/core";
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from "../hooks/useEvents";
 import { useCreateClass, useUpdateClass, useDeleteClass, useClasses } from "../hooks/useClasses";
-import { useClassExceptions, useCreateClassException, useDeleteClassException, useAllClassExceptions } from "../hooks/useClassException";
+import { useClassExceptions, useCreateClassException, useDeleteClassException } from "../hooks/useClassException";
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "../services/userService";
 import { Class, ScheduleTime } from "../types";
 import { toast, getErrorMessage } from "../utils/toast";
-import { formatDateTime, toDateTimeLocal, normalizeDate, canCancelClass as canCancelClassUtil } from "../utils/dateUtils";
+import { formatDateTime, toDateTimeLocal, normalizeDate, canCancelClass as canCancelClassUtil, dateToISOString } from "../utils/dateUtils";
 import { DEFAULT_START_TIME, DEFAULT_END_TIME, DAYS_OF_WEEK, DAY_NAMES } from "../utils/constants";
 import { CloseIcon, ClockIcon, CalendarIcon, UserIcon, TagIcon, DocumentIcon, BookIcon } from "./icons";
 import { ConfirmModal } from "./confirm-modal";
@@ -525,9 +525,9 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
   // Verificar se há exceção para a data selecionada
   const selectedDateException = useMemo(() => {
     if (!selectedDate || !exceptions.length) return null;
-    const selectedDateStr = new Date(selectedDate).toISOString().split('T')[0];
+    const selectedDateStr = dateToISOString(selectedDate);
     return exceptions.find((ex) => {
-      const exDateStr = new Date(ex.date).toISOString().split('T')[0];
+      const exDateStr = dateToISOString(ex.date);
       return exDateStr === selectedDateStr;
     }) || null;
   }, [selectedDate, exceptions]);
@@ -1335,22 +1335,19 @@ interface ManagementModalProps extends BaseModalProps {
 
 export function ManagementModal({ isOpen, onClose, canManage }: ManagementModalProps) {
   const { classes, isLoading: isLoadingClasses } = useClasses();
-  const { exceptions, isLoading: isLoadingExceptions, refetch: refetchExceptions } = useAllClassExceptions();
+  
+  // Buscar apenas exceções futuras
+  const today = useMemo(() => {
+    return dateToISOString(normalizeDate(new Date()));
+  }, []);
+  
+  const { exceptions: futureExceptions, isLoading: isLoadingExceptions, refetch: refetchExceptions } = useClassExceptions(undefined, today);
   const updateMutation = useUpdateClass();
   const deleteExceptionMutation = useDeleteClassException();
 
   const inactiveClasses = useMemo(() => {
     return classes.filter((cls) => cls.active === false);
   }, [classes]);
-
-  // Filtrar apenas exceções futuras (a partir de hoje)
-  const futureExceptions = useMemo(() => {
-    const today = normalizeDate(new Date());
-    return exceptions.filter((ex) => {
-      const exceptionDate = normalizeDate(ex.date);
-      return exceptionDate >= today;
-    });
-  }, [exceptions]);
 
   useEffect(() => {
     if (!isOpen) return;
