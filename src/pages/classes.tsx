@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { FiPlus, FiSearch, FiX, FiBook, FiUsers, FiCheckCircle, FiXCircle, FiCalendar } from "react-icons/fi";
 import { useClasses, useAddStudentToClass, useRemoveStudentFromClass, useDeleteClass, useClassById } from "../hooks/useClasses";
 import { useClassExceptions, useDeleteClassException, useCreateClassException } from "../hooks/useClassException";
+import { useAttendances, useCreateBulkAttendance } from "../hooks/useAttendance";
 import { ClassService } from "../services/classService";
 import { toast, getErrorMessage } from "../utils/toast";
 import { useAuth } from "../hooks/useAuth";
@@ -13,7 +14,9 @@ import { ClassModal } from "../components/calendar-modals";
 import { ConfirmModal } from "../components/confirm-modal";
 import { ClassCard } from "../components/class-card";
 import { CreateExceptionModal } from "../components/create-exception-modal";
-import { normalizeDate, formatDate, getDateBadgeInfo } from "../utils/dateUtils";
+import { AttendanceModal } from "../components/attendance-modal";
+import { normalizeDate, formatDate, getDateBadgeInfo, wasEnrolledOnDate, dateToISOString } from "../utils/dateUtils";
+import { canManageAttendance, canManageEventsAndClasses } from "../utils/permissions";
 
 const DEBOUNCE_DELAY = 300; // ms
 const MAX_UPCOMING_CLASS_DATES = 20; // Limite de próximas aulas a exibir
@@ -30,11 +33,14 @@ export function Classes() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
   const [isCreateExceptionModalOpen, setIsCreateExceptionModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [exceptionsFilter, setExceptionsFilter] = useState<string>("future"); // "all", "future", "past"
   const [selectedClassDate, setSelectedClassDate] = useState<string | null>(null);
   const [newExceptionReason, setNewExceptionReason] = useState("");
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string | null>(null);
+  const [attendancesMap, setAttendancesMap] = useState<Map<string, 'PRESENT' | 'ABSENT'>>(new Map());
 
   const { classes, isLoading, refetch } = useClasses();
   const addStudentMutation = useAddStudentToClass();
@@ -42,9 +48,10 @@ export function Classes() {
   const deleteClassMutation = useDeleteClass();
   const deleteExceptionMutation = useDeleteClassException();
   const createExceptionMutation = useCreateClassException();
+  const createBulkAttendanceMutation = useCreateBulkAttendance();
 
-  // Buscar exceções da turma selecionada
-  const selectedClassId = isExceptionsModalOpen && selectedClass ? String(selectedClass.id) : null;
+  // Buscar exceções da turma selecionada (quando modal de exceções ou presença está aberto)
+  const selectedClassId = (isExceptionsModalOpen || isAttendanceModalOpen) && selectedClass ? String(selectedClass.id) : null;
   const { exceptions, isLoading: isLoadingExceptions, refetch: refetchExceptions } = useClassExceptions(selectedClassId);
 
   // Buscar professores
@@ -95,12 +102,12 @@ export function Classes() {
 
   // Buscar dados da turma selecionada
   const { class: selectedClassDetails, refetch: refetchClassDetails } = useClassById(
-    isManageStudentsModalOpen && selectedClass ? String(selectedClass.id) : null
+    (isManageStudentsModalOpen || isAttendanceModalOpen) && selectedClass ? String(selectedClass.id) : null
   );
 
   // Verificar permissão
   useEffect(() => {
-    if (currentUser && !["secretary", "admin"].includes(currentUser.role)) {
+    if (currentUser && !canManageAttendance(currentUser)) {
       window.location.href = "/";
     }
   }, [currentUser]);
@@ -118,16 +125,19 @@ export function Classes() {
         if (isCreateExceptionModalOpen) {
           setIsCreateExceptionModalOpen(false);
         }
+        if (isAttendanceModalOpen) {
+          setIsAttendanceModalOpen(false);
+        }
       }
     };
 
-    if (isManageStudentsModalOpen || isExceptionsModalOpen || isCreateExceptionModalOpen) {
+    if (isManageStudentsModalOpen || isExceptionsModalOpen || isCreateExceptionModalOpen || isAttendanceModalOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => {
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [isManageStudentsModalOpen, isExceptionsModalOpen, isCreateExceptionModalOpen]);
+  }, [isManageStudentsModalOpen, isExceptionsModalOpen, isCreateExceptionModalOpen, isAttendanceModalOpen]);
 
   // Função helper para formatar dias e horários
   const formatSchedule = useCallback((classItem: Class): string[] | null => {
@@ -223,8 +233,67 @@ export function Classes() {
     setIsCreateExceptionModalOpen(true);
   };
 
+  const handleOpenAttendanceModal = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setSelectedAttendanceDate(null);
+    setAttendancesMap(new Map());
+    setIsAttendanceModalOpen(true);
+  };
+
+  const handleSelectAttendanceDate = (date: Date) => {
+    const dateStr = dateToISOString(date);
+    setSelectedAttendanceDate(dateStr);
+    setAttendancesMap(new Map());
+  };
+
+  const handleAttendanceChange = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
+    const newMap = new Map(attendancesMap);
+    newMap.set(studentId, status);
+    setAttendancesMap(newMap);
+  };
+
+  const handleSaveAttendances = async () => {
+    if (!selectedClass || !selectedAttendanceDate) {
+      return;
+    }
+
+    try {
+      // Criar mapa com todas as presenças incluindo ausências padrão
+      const allAttendances = new Map<string, 'PRESENT' | 'ABSENT'>(attendancesMap);
+      
+      // Adicionar ausências padrão para alunos que estavam matriculados e não têm presença registrada
+      selectedClassDetails?.students?.forEach((enrollment) => {
+        if (!allAttendances.has(enrollment.studentId) && 
+            wasEnrolledOnDate(enrollment.createdAt, selectedAttendanceDate)) {
+          allAttendances.set(enrollment.studentId, 'ABSENT');
+        }
+      });
+
+      // Só salvar se houver pelo menos uma presença/ausência
+      if (allAttendances.size === 0) {
+        return;
+      }
+
+      const attendances = Array.from(allAttendances.entries()).map(([studentId, status]) => ({
+        studentId,
+        status,
+      }));
+
+      await createBulkAttendanceMutation.mutateAsync({
+        classId: String(selectedClass.id),
+        date: selectedAttendanceDate,
+        attendances,
+      });
+
+      toast.success("Presenças registradas com sucesso!");
+      // Não fechar o modal manter aberto para visualização
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Erro ao registrar presenças"));
+    }
+  };
+
   const handleSelectClassDate = useCallback((date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = dateToISOString(date);
     setSelectedClassDate(dateStr);
   }, []);
 
@@ -319,22 +388,23 @@ export function Classes() {
     }
   };
 
+  // Memorizar hoje uma vez para evitar recálculos
+  const today = useMemo(() => normalizeDate(new Date()), []);
+
   // Separar exceções futuras e passadas
   const futureExceptions = useMemo(() => {
-    const today = normalizeDate(new Date());
     return exceptions.filter((ex) => {
       const exceptionDate = normalizeDate(ex.date);
       return exceptionDate >= today;
     });
-  }, [exceptions]);
+  }, [exceptions, today]);
 
   const pastExceptions = useMemo(() => {
-    const today = normalizeDate(new Date());
     return exceptions.filter((ex) => {
       const exceptionDate = normalizeDate(ex.date);
       return exceptionDate < today;
     });
-  }, [exceptions]);
+  }, [exceptions, today]);
 
   // Filtrar exceções baseado no filtro selecionado
   const filteredExceptions = useMemo(() => {
@@ -347,19 +417,51 @@ export function Classes() {
     }
   }, [exceptions, futureExceptions, pastExceptions, exceptionsFilter]);
 
+
+  // Buscar presenças existentes quando selecionar uma data
+  const selectedClassIdForAttendance = isAttendanceModalOpen && selectedClass ? String(selectedClass.id) : null;
+  const { attendances: existingAttendances } = useAttendances(
+    selectedClassIdForAttendance && selectedAttendanceDate
+      ? {
+          classId: selectedClassIdForAttendance,
+          startDate: selectedAttendanceDate,
+          endDate: selectedAttendanceDate,
+        }
+      : undefined
+  );
+
+  // Carregar presenças existentes no mapa quando mudar a data ou quando carregar
+  useEffect(() => {
+    if (!selectedAttendanceDate) return;
+    
+    if (existingAttendances.length === 0) {
+      setAttendancesMap(new Map());
+      return;
+    }
+
+    const newMap = new Map<string, 'PRESENT' | 'ABSENT'>();
+    existingAttendances.forEach((att) => {
+      // Comparar diretamente a string da data (já vem normalizada do backend)
+      const attDateStr = dateToISOString(att.date);
+      if (attDateStr === selectedAttendanceDate) {
+        newMap.set(att.studentId, att.status);
+      }
+    });
+    setAttendancesMap(newMap);
+  }, [selectedAttendanceDate, existingAttendances]);
+
   // Calcular próximas aulas programadas
   const upcomingClassDates = useMemo(() => {
     if (!selectedClass || !selectedClass.recurringDays || selectedClass.recurringDays.length === 0) {
       return [];
     }
 
-    const today = normalizeDate(new Date());
     const startDate = selectedClass.startDate ? normalizeDate(new Date(selectedClass.startDate)) : today;
     const endDate = selectedClass.endDate ? normalizeDate(new Date(selectedClass.endDate)) : null;
     
     // Criar set de datas já canceladas
     const cancelledDates = new Set(
-      exceptions.map((ex) => new Date(ex.date).toISOString().split("T")[0])
+      exceptions.map((ex) => dateToISOString(ex.date))
     );
 
     const upcomingDates: Array<{ date: Date; dayOfWeek: number; schedule?: ScheduleTime; badgeInfo: ReturnType<typeof getDateBadgeInfo> }> = [];
@@ -385,7 +487,7 @@ export function Classes() {
       
       // Verificar se este dia da semana tem aula
       if (selectedClass.recurringDays.includes(dayOfWeek)) {
-        const dateStr = currentDate.toISOString().split("T")[0];
+        const dateStr = dateToISOString(currentDate);
         
         // Verificar se não está cancelada
         if (!cancelledDates.has(dateStr)) {
@@ -402,12 +504,12 @@ export function Classes() {
     }
 
     return upcomingDates;
-  }, [selectedClass, exceptions]);
+  }, [selectedClass, exceptions, today]);
 
   // Alunos disponíveis
   const availableStudents = availableStudentsData?.data || [];
 
-  if (!currentUser || !["secretary", "admin"].includes(currentUser.role)) {
+  if (!currentUser || !canManageEventsAndClasses(currentUser)) {
     return null;
   }
 
@@ -552,6 +654,7 @@ export function Classes() {
                   onDelete={handleOpenDeleteModal}
                   onManageStudents={handleOpenManageStudentsModal}
                   onManageExceptions={handleOpenExceptionsModal}
+                  onManageAttendance={canManageAttendance(currentUser) ? handleOpenAttendanceModal : undefined}
                   isMobile={false}
                 />
               );
@@ -573,6 +676,7 @@ export function Classes() {
                   onDelete={handleOpenDeleteModal}
                   onManageStudents={handleOpenManageStudentsModal}
                   onManageExceptions={handleOpenExceptionsModal}
+                  onManageAttendance={canManageAttendance(currentUser) ? handleOpenAttendanceModal : undefined}
                   isMobile={true}
                 />
               );
@@ -849,6 +953,29 @@ export function Classes() {
           onReasonChange={setNewExceptionReason}
           onCreateException={handleCreateException}
           isPending={createExceptionMutation.isPending}
+        />
+      )}
+
+      {/* Modal de Presenças */}
+      {isAttendanceModalOpen && selectedClass && selectedClassDetails && (
+        <AttendanceModal
+          isOpen={isAttendanceModalOpen}
+          onClose={() => {
+            setIsAttendanceModalOpen(false);
+            setSelectedAttendanceDate(null);
+            setAttendancesMap(new Map());
+          }}
+          selectedClass={selectedClass}
+          selectedDate={selectedAttendanceDate}
+          attendances={attendancesMap}
+          onSelectDate={handleSelectAttendanceDate}
+          onAttendanceChange={handleAttendanceChange}
+          onSave={handleSaveAttendances}
+          isPending={createBulkAttendanceMutation.isPending}
+          currentUser={currentUser}
+          students={selectedClassDetails.students || []}
+          isLoadingStudents={!selectedClassDetails}
+          exceptions={exceptions || []}
         />
       )}
 

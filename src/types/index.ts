@@ -34,7 +34,7 @@ export interface Class {
       email: string;
       role: string;
     } | null;
-    registeredAt: string;
+    createdAt: string;
   }>;
   createdAt?: string;
   updatedAt?: string;
@@ -115,6 +115,18 @@ export interface ClassException {
   reason?: string;
   className?: string;
   classStyle?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Attendance types
+export interface Attendance {
+  id: string;
+  classId: string;
+  studentId: string;
+  date: string;
+  status: 'PRESENT' | 'ABSENT';
+  className?: string;
   createdAt?: string;
   updatedAt?: string;
 } 

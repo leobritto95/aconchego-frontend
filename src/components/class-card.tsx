@@ -1,4 +1,4 @@
-import { FiEdit2, FiUsers, FiCalendar, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiUsers, FiCalendar, FiTrash2, FiClipboard } from "react-icons/fi";
 import { Class } from "../types";
 
 interface ClassCardProps {
@@ -10,6 +10,7 @@ interface ClassCardProps {
   onDelete: (classItem: Class) => void;
   onManageStudents: (classItem: Class) => void;
   onManageExceptions: (classItem: Class) => void;
+  onManageAttendance?: (classItem: Class) => void;
   isMobile?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function ClassCard({
   onDelete,
   onManageStudents,
   onManageExceptions,
+  onManageAttendance,
   isMobile = false,
 }: ClassCardProps) {
   const scheduleGroups = classItem.recurringDays && classItem.recurringDays.length > 0 
@@ -52,13 +54,22 @@ export function ClassCard({
               </span>
             </div>
           </div>
-          <button
-            onClick={() => onDelete(classItem)}
-            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110 flex-shrink-0 ml-2"
-            title="Excluir"
-          >
-            <FiTrash2 size={16} />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            <button
+              onClick={() => onEdit(classItem)}
+              className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
+              title="Editar"
+            >
+              <FiEdit2 size={16} />
+            </button>
+            <button
+              onClick={() => onDelete(classItem)}
+              className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
+              title="Excluir"
+            >
+              <FiTrash2 size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-1 mb-2 text-xs text-gray-600">
@@ -86,28 +97,41 @@ export function ClassCard({
           )}
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
           <button
             onClick={() => onManageStudents(classItem)}
-            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs"
+            className={`flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
           >
             <FiUsers size={14} />
-            Alunos
+            <span>Alunos</span>
           </button>
-          <button
-            onClick={() => onManageExceptions(classItem)}
-            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
-          >
-            <FiCalendar size={14} />
-            Cancelamentos
-          </button>
-          <button
-            onClick={() => onEdit(classItem)}
-            className="flex-1 flex items-center justify-center gap-1.5 p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-medium text-xs"
-          >
-            <FiEdit2 size={14} />
-            Editar
-          </button>
+          {onManageAttendance && (
+            <>
+              <button
+                onClick={() => onManageAttendance(classItem)}
+                className="flex items-center justify-center gap-1.5 p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
+              >
+                <FiClipboard size={14} />
+                <span>Presenças</span>
+              </button>
+              <button
+                onClick={() => onManageExceptions(classItem)}
+                className="flex items-center justify-center gap-1.5 p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"
+              >
+                <FiCalendar size={14} />
+                <span>Cancelamentos</span>
+              </button>
+            </>
+          )}
+          {!onManageAttendance && (
+            <button
+              onClick={() => onManageExceptions(classItem)}
+              className="flex items-center justify-center gap-1.5 p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"
+            >
+              <FiCalendar size={14} />
+              <span>Cancelamentos</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -136,13 +160,22 @@ export function ClassCard({
             </span>
           </div>
         </div>
-        <button
-          onClick={() => onDelete(classItem)}
-          className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110 flex-shrink-0 ml-2"
-          title="Excluir"
-        >
-          <FiTrash2 size={18} />
-        </button>
+        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          <button
+            onClick={() => onEdit(classItem)}
+            className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
+            title="Editar"
+          >
+            <FiEdit2 size={18} />
+          </button>
+          <button
+            onClick={() => onDelete(classItem)}
+            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
+            title="Excluir"
+          >
+            <FiTrash2 size={18} />
+          </button>
+        </div>
       </div>
 
       {classItem.description && (
@@ -174,28 +207,41 @@ export function ClassCard({
         )}
       </div>
 
-      <div className="flex gap-2 pt-3 border-t border-gray-100 mt-auto">
+      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100 mt-auto">
         <button
           onClick={() => onManageStudents(classItem)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs"
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
         >
           <FiUsers size={14} />
-          Alunos
+          <span>Alunos</span>
         </button>
-        <button
-          onClick={() => onManageExceptions(classItem)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
-        >
-          <FiCalendar size={14} />
-          Cancelamentos
-        </button>
-        <button
-          onClick={() => onEdit(classItem)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors font-medium text-xs"
-        >
-          <FiEdit2 size={14} />
-          Editar
-        </button>
+        {onManageAttendance && (
+          <>
+            <button
+              onClick={() => onManageAttendance(classItem)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors font-medium text-xs"
+            >
+              <FiClipboard size={14} />
+              <span>Presenças</span>
+            </button>
+            <button
+              onClick={() => onManageExceptions(classItem)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"
+            >
+              <FiCalendar size={14} />
+              <span>Cancelamentos</span>
+            </button>
+          </>
+        )}
+        {!onManageAttendance && (
+          <button
+            onClick={() => onManageExceptions(classItem)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"
+          >
+            <FiCalendar size={14} />
+            <span>Cancelamentos</span>
+          </button>
+        )}
       </div>
     </div>
   );

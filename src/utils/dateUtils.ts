@@ -45,6 +45,14 @@ export function normalizeDate(date: Date | string): Date {
 }
 
 /**
+ * Converte uma data para string no formato YYYY-MM-DD
+ */
+export function dateToISOString(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toISOString().split("T")[0];
+}
+
+/**
  * Verifica se uma aula pode ser cancelada baseado na data selecionada e horário da turma
  */
 export function canCancelClass(
@@ -147,5 +155,145 @@ export function getDateBadgeInfo(date: Date, today: Date = normalizeDate(new Dat
     label: "",
     className: "",
   };
+}
+
+/**
+ * Interface para informações de data de aula passada
+ */
+export interface PastClassDateInfo {
+  date: Date;
+  dayOfWeek: number;
+  schedule?: { startTime: string; endTime: string };
+  badgeInfo: DateBadgeInfo;
+}
+
+/**
+ * Calcula todas as datas válidas de uma turma para um range específico
+ * Retorna datas ordenadas da mais recente para a mais antiga
+ */
+export function calculateClassDatesForRange(
+  classItem: {
+    recurringDays: number[];
+    scheduleTimes: Record<string, { startTime: string; endTime: string }>;
+    startDate: string;
+    endDate?: string | null;
+  },
+  startDate: Date,
+  endDate: Date
+): PastClassDateInfo[] {
+  if (!classItem.recurringDays || classItem.recurringDays.length === 0) {
+    return [];
+  }
+
+  const today = normalizeDate(new Date());
+  const classStartDate = classItem.startDate ? normalizeDate(new Date(classItem.startDate)) : today;
+  const classEndDate = classItem.endDate ? normalizeDate(new Date(classItem.endDate)) : null;
+
+  const pastDates: PastClassDateInfo[] = [];
+  const now = new Date();
+  const rangeStart = normalizeDate(startDate);
+  const rangeEnd = normalizeDate(endDate);
+
+  // Limitar ao período válido da turma
+  const actualStart = classStartDate > rangeStart ? classStartDate : rangeStart;
+  const actualEnd = classEndDate && classEndDate < rangeEnd ? classEndDate : rangeEnd;
+
+  // Iterar pelo range (sempre de trás para frente, pois queremos passadas)
+  // Limitar a hoje para não incluir datas futuras
+  const currentDate = new Date(actualEnd > today ? today : actualEnd);
+
+  // Iterar do fim do range até o início
+  while (currentDate >= actualStart) {
+    const dayOfWeek = currentDate.getDay();
+    const dateNormalized = normalizeDate(currentDate);
+    const isToday = dateNormalized.getTime() === today.getTime();
+
+    // Verificar se este dia da semana está na recorrência
+    if (classItem.recurringDays.includes(dayOfWeek)) {
+      const schedule = classItem.scheduleTimes?.[dayOfWeek.toString()];
+      if (schedule?.startTime) {
+        // Se for hoje, verificar se o horário de início já passou
+        if (isToday) {
+          const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
+          const classStartTime = new Date(now);
+          classStartTime.setHours(startHour, startMinute, 0, 0);
+          
+          // Só incluir se o horário de início já passou
+          if (now < classStartTime) {
+            currentDate.setDate(currentDate.getDate() - 1);
+            continue;
+          }
+        }
+        
+        // Incluir data válida
+        pastDates.push({
+          date: dateNormalized,
+          dayOfWeek,
+          schedule,
+          badgeInfo: getDateBadgeInfo(dateNormalized),
+        });
+      }
+    }
+
+    // Ir para o dia anterior
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+
+  // Ordenar por data (mais recente primeiro)
+  return pastDates.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+/**
+ * Remove datas canceladas (exceções) de uma lista de datas
+ */
+export function filterCancelledDates(
+  dates: PastClassDateInfo[],
+  exceptions?: Array<{ date: string }>
+): PastClassDateInfo[] {
+  if (!exceptions || exceptions.length === 0) {
+    return dates;
+  }
+
+  const cancelledDates = new Set(
+    exceptions.map((ex) => dateToISOString(ex.date))
+  );
+
+  return dates.filter((dateInfo) => {
+    const dateStr = dateToISOString(dateInfo.date);
+    return !cancelledDates.has(dateStr);
+  });
+}
+
+/**
+ * Calcula datas válidas passadas para um range específico
+ * Combina calculateClassDatesForRange e filterCancelledDates
+ * Retorna datas ordenadas da mais recente para a mais antiga
+ */
+export function getPastClassDatesForRange(
+  classItem: {
+    recurringDays: number[];
+    scheduleTimes: Record<string, { startTime: string; endTime: string }>;
+    startDate: string;
+    endDate?: string | null;
+  },
+  exceptions: Array<{ date: string }> | undefined,
+  startDate: Date,
+  endDate: Date
+): PastClassDateInfo[] {
+  const allDates = calculateClassDatesForRange(classItem, startDate, endDate);
+  return filterCancelledDates(allDates, exceptions);
+}
+
+/**
+ * Verifica se um aluno estava matriculado em uma data específica
+ * @param enrollmentCreatedAt - Data de criação do enrollment (matrícula)
+ * @param targetDate - Data alvo para verificar
+ * @returns true se estava matriculado na data, false caso contrário
+ */
+export function wasEnrolledOnDate(enrollmentCreatedAt: string, targetDate: Date | string): boolean {
+  const enrollmentDate = normalizeDate(new Date(enrollmentCreatedAt));
+  const targetDateNormalized = normalizeDate(typeof targetDate === 'string' ? new Date(targetDate) : targetDate);
+  
+  return enrollmentDate <= targetDateNormalized;
 }
 

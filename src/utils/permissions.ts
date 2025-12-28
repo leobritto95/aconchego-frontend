@@ -40,4 +40,9 @@ export function getCurrentUserId(): number | null {
   } catch {
     return null
   }
+}
+
+export function canManageAttendance(user: User | null): boolean {
+  if (!user) return false
+  return ['admin', 'secretary', 'teacher'].includes(user.role)
 } 
