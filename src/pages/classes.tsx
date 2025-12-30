@@ -10,6 +10,7 @@ import { Class, ScheduleTime } from "../types";
 import { DAY_NAMES } from "../utils/constants";
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "../services/userService";
+import { useUserCounts } from "../hooks/useUser";
 import { ClassModal } from "../components/calendar-modals";
 import { ConfirmModal } from "../components/confirm-modal";
 import { ClassCard } from "../components/class-card";
@@ -43,6 +44,7 @@ export function Classes() {
   const [attendancesMap, setAttendancesMap] = useState<Map<string, 'PRESENT' | 'ABSENT'>>(new Map());
 
   const { classes, isLoading, refetch } = useClasses();
+  const { counts: userCounts } = useUserCounts();
   const addStudentMutation = useAddStudentToClass();
   const removeStudentMutation = useRemoveStudentFromClass();
   const deleteClassMutation = useDeleteClass();
@@ -199,10 +201,10 @@ export function Classes() {
     const total = classes.length;
     const active = classes.filter((cls) => cls.active !== false).length;
     const inactive = classes.filter((cls) => cls.active === false).length;
-    const totalStudents = classes.reduce((sum, cls) => sum + (cls.studentsCount || 0), 0);
+    const totalStudents = userCounts?.students || 0;
 
     return { total, active, inactive, totalStudents };
-  }, [classes]);
+  }, [classes, userCounts]);
 
   const handleOpenCreateModal = () => {
     setSelectedClass(null);
@@ -545,7 +547,7 @@ export function Classes() {
       </div>
 
       {/* Estatísticas */}
-      <div className={`grid grid-cols-2 ${isStudent(currentUser) ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-2 md:gap-4 mb-4 md:mb-8`}>
+      <div className={`grid grid-cols-2 ${canManage ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-2 md:gap-4 mb-4 md:mb-8`}>
         <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
@@ -579,7 +581,7 @@ export function Classes() {
             </div>
           </div>
         </div>
-        {!isStudent(currentUser) && (
+        {canManage && (
           <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
