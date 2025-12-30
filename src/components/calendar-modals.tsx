@@ -577,7 +577,7 @@ export function ClassModal({ isOpen, onClose, classData, selectedDate, canManage
   useEffect(() => {
     if (!isOpen) return;
     
-    if (classData && !isEditing) {
+    if (classData) {
       setFormData({
         name: classData.name || "",
         description: classData.description || "",
