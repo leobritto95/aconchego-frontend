@@ -7,13 +7,13 @@ interface MenuItem {
   path: string;
   label: string;
   icon: LucideIcon;
-  roles?: ("secretary" | "admin")[];
+  roles?: ("secretary" | "admin" | "teacher" | "student")[];
 }
 
 const baseMenuItems: MenuItem[] = [
   { id: "home", path: "/", label: "Inicio", icon: House },
   { id: "users", path: "/users", label: "Usuários", icon: Users, roles: ["secretary", "admin"] },
-  { id: "classes", path: "/classes", label: "Turmas", icon: BookOpen, roles: ["secretary", "admin"] },
+  { id: "classes", path: "/classes", label: "Turmas", icon: BookOpen, roles: ["secretary", "admin", "teacher", "student"] },
   { id: "payment", path: "/payment", label: "Pagamento", icon: Receipt },
   { id: "feedback", path: "/feedback", label: "Feedback", icon: FileUser },
   { id: "news", path: "/news", label: "Noticias", icon: Newspaper },
@@ -28,7 +28,7 @@ export function BottomMenu() {
   // Filtrar itens do menu baseado nas permissões do usuário
   const menuItems = baseMenuItems.filter((item) => {
     if (!item.roles) return true; // Item sem restrição de role
-    return user && item.roles.includes(user.role as "secretary" | "admin");
+    return user && item.roles.includes(user.role as "secretary" | "admin" | "teacher" | "student");
   });
 
   function isActive(path: string) {

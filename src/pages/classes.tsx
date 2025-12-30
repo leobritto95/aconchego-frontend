@@ -16,7 +16,7 @@ import { ClassCard } from "../components/class-card";
 import { CreateExceptionModal } from "../components/create-exception-modal";
 import { AttendanceModal } from "../components/attendance-modal";
 import { normalizeDate, formatDate, getDateBadgeInfo, wasEnrolledOnDate, dateToISOString } from "../utils/dateUtils";
-import { canManageAttendance, canManageEventsAndClasses } from "../utils/permissions";
+import { canManageAttendance, canManageEventsAndClasses, canViewClasses, isTeacher, isStudent } from "../utils/permissions";
 
 const DEBOUNCE_DELAY = 300; // ms
 const MAX_UPCOMING_CLASS_DATES = 20; // Limite de próximas aulas a exibir
@@ -86,6 +86,9 @@ export function Classes() {
     };
   }, [studentSearchTerm]);
 
+  // Verificar permissão para gerenciar
+  const canManage = currentUser ? canManageEventsAndClasses(currentUser) : false;
+  
   // Buscar alunos disponíveis (não matriculados na turma)
   const { data: availableStudentsData, isLoading: isLoadingStudents, refetch: refetchAvailableStudents } = useQuery({
     queryKey: ["availableStudents", selectedClass?.id, debouncedSearchTerm],
@@ -97,7 +100,7 @@ export function Classes() {
       });
       return response.success ? response.data : { data: [], page: 1, limit: 20, total: 0, totalPages: 0 };
     },
-    enabled: isManageStudentsModalOpen && !!selectedClass,
+    enabled: isManageStudentsModalOpen && !!selectedClass && canManage,
   });
 
   // Buscar dados da turma selecionada
@@ -107,36 +110,32 @@ export function Classes() {
 
   // Verificar permissão
   useEffect(() => {
-    if (currentUser && !canManageAttendance(currentUser)) {
+    if (currentUser && !canViewClasses(currentUser)) {
       window.location.href = "/";
     }
   }, [currentUser]);
 
   // Fechar modal ao pressionar ESC
   useEffect(() => {
+    const modals = [
+      { isOpen: isManageStudentsModalOpen, close: () => setIsManageStudentsModalOpen(false) },
+      { isOpen: isExceptionsModalOpen, close: () => setIsExceptionsModalOpen(false) },
+      { isOpen: isCreateExceptionModalOpen, close: () => setIsCreateExceptionModalOpen(false) },
+      { isOpen: isAttendanceModalOpen, close: () => setIsAttendanceModalOpen(false) },
+    ];
+
+    const hasOpenModal = modals.some(m => m.isOpen);
+    if (!hasOpenModal) return;
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (isManageStudentsModalOpen) {
-          setIsManageStudentsModalOpen(false);
-        }
-        if (isExceptionsModalOpen) {
-          setIsExceptionsModalOpen(false);
-        }
-        if (isCreateExceptionModalOpen) {
-          setIsCreateExceptionModalOpen(false);
-        }
-        if (isAttendanceModalOpen) {
-          setIsAttendanceModalOpen(false);
-        }
+        const openModal = modals.find(m => m.isOpen);
+        openModal?.close();
       }
     };
 
-    if (isManageStudentsModalOpen || isExceptionsModalOpen || isCreateExceptionModalOpen || isAttendanceModalOpen) {
-      document.addEventListener("keydown", handleEscape);
-      return () => {
-        document.removeEventListener("keydown", handleEscape);
-      };
-    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [isManageStudentsModalOpen, isExceptionsModalOpen, isCreateExceptionModalOpen, isAttendanceModalOpen]);
 
   // Função helper para formatar dias e horários
@@ -173,27 +172,26 @@ export function Classes() {
     return formattedGroups;
   }, []);
 
-  // Filtrar turmas
+  // Filtrar turmas (busca e status)
   const filteredClasses = useMemo(() => {
-    let filtered = classes;
-
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (cls) =>
+    const searchLower = searchTerm.toLowerCase();
+    
+    return classes.filter((cls) => {
+      // Filtro de busca
+      if (searchTerm) {
+        const matchesSearch = 
           cls.name?.toLowerCase().includes(searchLower) ||
           cls.description?.toLowerCase().includes(searchLower) ||
-          cls.style?.toLowerCase().includes(searchLower)
-      );
-    }
+          cls.style?.toLowerCase().includes(searchLower);
+        if (!matchesSearch) return false;
+      }
 
-    if (statusFilter === "active") {
-      filtered = filtered.filter((cls) => cls.active !== false);
-    } else if (statusFilter === "inactive") {
-      filtered = filtered.filter((cls) => cls.active === false);
-    }
-
-    return filtered;
+      // Filtro de status
+      if (statusFilter === "active") return cls.active !== false;
+      if (statusFilter === "inactive") return cls.active === false;
+      
+      return true;
+    });
   }, [classes, searchTerm, statusFilter]);
 
   // Estatísticas
@@ -223,7 +221,10 @@ export function Classes() {
 
   const handleOpenExceptionsModal = (classItem: Class) => {
     setSelectedClass(classItem);
-    setExceptionsFilter("future");
+    // Professores e alunos veem apenas cancelamentos futuros
+    if (currentUser && (isTeacher(currentUser) || isStudent(currentUser))) {
+      setExceptionsFilter("future");
+    }
     setIsExceptionsModalOpen(true);
   };
 
@@ -407,15 +408,20 @@ export function Classes() {
   }, [exceptions, today]);
 
   // Filtrar exceções baseado no filtro selecionado
+  // Professores e alunos veem apenas cancelamentos futuros
   const filteredExceptions = useMemo(() => {
-    if (exceptionsFilter === "future") {
-      return futureExceptions;
-    } else if (exceptionsFilter === "past") {
-      return pastExceptions;
-    } else {
-      return exceptions;
-    }
-  }, [exceptions, futureExceptions, pastExceptions, exceptionsFilter]);
+    const isRestrictedUser = currentUser && (isTeacher(currentUser) || isStudent(currentUser));
+    if (isRestrictedUser) return futureExceptions;
+    
+    // Admin/Secretary podem escolher o filtro
+    const filterMap: Record<string, typeof exceptions> = {
+      future: futureExceptions,
+      past: pastExceptions,
+      all: exceptions,
+    };
+    
+    return filterMap[exceptionsFilter] || futureExceptions;
+  }, [futureExceptions, pastExceptions, exceptions, exceptionsFilter, currentUser]);
 
 
   // Buscar presenças existentes quando selecionar uma data
@@ -432,16 +438,13 @@ export function Classes() {
 
   // Carregar presenças existentes no mapa quando mudar a data ou quando carregar
   useEffect(() => {
-    if (!selectedAttendanceDate) return;
-    
-    if (existingAttendances.length === 0) {
+    if (!selectedAttendanceDate) {
       setAttendancesMap(new Map());
       return;
     }
-
+    
     const newMap = new Map<string, 'PRESENT' | 'ABSENT'>();
     existingAttendances.forEach((att) => {
-      // Comparar diretamente a string da data (já vem normalizada do backend)
       const attDateStr = dateToISOString(att.date);
       if (attDateStr === selectedAttendanceDate) {
         newMap.set(att.studentId, att.status);
@@ -509,7 +512,7 @@ export function Classes() {
   // Alunos disponíveis
   const availableStudents = availableStudentsData?.data || [];
 
-  if (!currentUser || !canManageEventsAndClasses(currentUser)) {
+  if (!currentUser || !canViewClasses(currentUser)) {
     return null;
   }
 
@@ -518,21 +521,31 @@ export function Classes() {
       {/* Header */}
       <div className="mb-4 md:mb-8 flex items-center justify-between gap-3 md:gap-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl md:text-4xl font-bold text-amber-900 mb-1 md:mb-2">Gerenciar Turmas</h1>
-          <p className="text-gray-600 text-xs md:text-base hidden md:block">Gerencie todas as turmas do sistema</p>
+          <h1 className="text-xl md:text-4xl font-bold text-amber-900 mb-1 md:mb-2">
+            {canManage ? "Gerenciar Turmas" : "Minhas Turmas"}
+          </h1>
+          <p className="text-gray-600 text-xs md:text-base hidden md:block">
+            {canManage 
+              ? "Gerencie as turmas do sistema" 
+              : currentUser && isTeacher(currentUser)
+              ? "Visualize e gerencie suas turmas"
+              : "Visualize suas turmas e presenças"}
+          </p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-3 py-2 md:px-5 md:py-3 rounded-lg hover:bg-amber-800 transition-all font-medium text-sm md:text-base shadow-md md:shadow-lg hover:shadow-lg md:hover:shadow-xl flex-shrink-0"
-        >
-          <FiPlus size={18} className="md:w-5 md:h-5" />
-          <span className="hidden sm:inline">Nova Turma</span>
-          <span className="sm:hidden">Nova</span>
-        </button>
+        {canManage && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-3 py-2 md:px-5 md:py-3 rounded-lg hover:bg-amber-800 transition-all font-medium text-sm md:text-base shadow-md md:shadow-lg hover:shadow-lg md:hover:shadow-xl flex-shrink-0"
+          >
+            <FiPlus size={18} className="md:w-5 md:h-5" />
+            <span className="hidden sm:inline">Nova Turma</span>
+            <span className="sm:hidden">Nova</span>
+          </button>
+        )}
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-8">
+      <div className={`grid grid-cols-2 ${isStudent(currentUser) ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-2 md:gap-4 mb-4 md:mb-8`}>
         <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
@@ -566,17 +579,19 @@ export function Classes() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-gray-600 text-[10px] md:text-sm font-medium mb-0.5 md:mb-1 truncate">Alunos</p>
-              <p className="text-lg md:text-3xl font-bold text-blue-600">{stats.totalStudents}</p>
-            </div>
-            <div className="bg-blue-100 p-1.5 md:p-3 rounded-md md:rounded-lg flex-shrink-0 ml-1">
-              <FiUsers className="text-blue-600 w-4 h-4 md:w-6 md:h-6" />
+        {!isStudent(currentUser) && (
+          <div className="bg-white rounded-lg md:rounded-xl shadow-sm p-2.5 md:p-4 border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-[10px] md:text-sm font-medium mb-0.5 md:mb-1 truncate">Alunos</p>
+                <p className="text-lg md:text-3xl font-bold text-blue-600">{stats.totalStudents}</p>
+              </div>
+              <div className="bg-blue-100 p-1.5 md:p-3 rounded-md md:rounded-lg flex-shrink-0 ml-1">
+                <FiUsers className="text-blue-600 w-4 h-4 md:w-6 md:h-6" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Filtros */}
@@ -625,9 +640,13 @@ export function Classes() {
           <p className="text-gray-500 text-xs md:text-sm mb-4 md:mb-6">
             {searchTerm || statusFilter
               ? "Tente ajustar os filtros de busca"
-              : "Comece criando a primeira turma"}
+              : canManage
+              ? "Comece criando a primeira turma"
+              : currentUser && isTeacher(currentUser)
+              ? "Você ainda não é professor de nenhuma turma"
+              : "Você ainda não está matriculado em nenhuma turma"}
           </p>
-          {!searchTerm && !statusFilter && (
+          {!searchTerm && !statusFilter && canManage && (
             <button
               onClick={handleOpenCreateModal}
               className="inline-flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-4 py-2 md:px-5 md:py-3 rounded-lg hover:bg-amber-800 transition-all font-medium text-sm md:text-base shadow-md hover:shadow-lg"
@@ -650,11 +669,11 @@ export function Classes() {
                   teacher={teacher || null}
                   index={index}
                   formatSchedule={formatSchedule}
-                  onEdit={handleOpenEditModal}
-                  onDelete={handleOpenDeleteModal}
-                  onManageStudents={handleOpenManageStudentsModal}
+                  onEdit={canManage ? handleOpenEditModal : undefined}
+                  onDelete={canManage ? handleOpenDeleteModal : undefined}
+                  onManageStudents={!isStudent(currentUser) ? handleOpenManageStudentsModal : undefined}
                   onManageExceptions={handleOpenExceptionsModal}
-                  onManageAttendance={canManageAttendance(currentUser) ? handleOpenAttendanceModal : undefined}
+                  onManageAttendance={canManageAttendance(currentUser) || isStudent(currentUser) ? handleOpenAttendanceModal : undefined}
                   isMobile={false}
                 />
               );
@@ -672,11 +691,11 @@ export function Classes() {
                   teacher={teacher || null}
                   index={index}
                   formatSchedule={formatSchedule}
-                  onEdit={handleOpenEditModal}
-                  onDelete={handleOpenDeleteModal}
-                  onManageStudents={handleOpenManageStudentsModal}
+                  onEdit={canManage ? handleOpenEditModal : undefined}
+                  onDelete={canManage ? handleOpenDeleteModal : undefined}
+                  onManageStudents={!isStudent(currentUser) ? handleOpenManageStudentsModal : undefined}
                   onManageExceptions={handleOpenExceptionsModal}
-                  onManageAttendance={canManageAttendance(currentUser) ? handleOpenAttendanceModal : undefined}
+                  onManageAttendance={canManageAttendance(currentUser) || isStudent(currentUser) ? handleOpenAttendanceModal : undefined}
                   isMobile={true}
                 />
               );
@@ -706,7 +725,9 @@ export function Classes() {
           >
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
               <div className="flex-1 min-w-0 pr-2">
-                <h2 className="text-lg md:text-2xl font-bold text-amber-900">Gerenciar Alunos</h2>
+                <h2 className="text-lg md:text-2xl font-bold text-amber-900">
+                  {canManage ? "Gerenciar Alunos" : "Alunos"}
+                </h2>
                 <p className="text-gray-600 text-xs md:text-sm mt-0.5">{selectedClass.name}</p>
               </div>
               <button
@@ -736,13 +757,15 @@ export function Classes() {
                           </p>
                           <p className="text-xs text-gray-600 truncate">{enrollment.student?.email}</p>
                         </div>
-                        <button
-                          onClick={() => handleRemoveStudent(String(enrollment.studentId))}
-                          disabled={removeStudentMutation.isPending}
-                          className="ml-3 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                        >
-                          Remover
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={() => handleRemoveStudent(String(enrollment.studentId))}
+                            disabled={removeStudentMutation.isPending}
+                            className="ml-3 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                          >
+                            Remover
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -753,53 +776,55 @@ export function Classes() {
                 )}
               </div>
 
-              {/* Adicionar Alunos */}
-              <div>
-                <h3 className="text-sm md:text-base font-semibold text-gray-800 mb-3">Adicionar Alunos</h3>
-                <div className="relative mb-3">
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Buscar alunos..."
-                    value={studentSearchTerm}
-                    onChange={(e) => setStudentSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all text-sm"
-                  />
-                </div>
-                {isLoadingStudents ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-900 mx-auto"></div>
-                    <p className="mt-2 text-sm text-gray-600">Carregando alunos...</p>
+              {/* Adicionar Alunos - apenas para admin/secretary */}
+              {canManage && (
+                <div>
+                  <h3 className="text-sm md:text-base font-semibold text-gray-800 mb-3">Adicionar Alunos</h3>
+                  <div className="relative mb-3">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Buscar alunos..."
+                      value={studentSearchTerm}
+                      onChange={(e) => setStudentSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all text-sm"
+                    />
                   </div>
-                ) : availableStudents.length === 0 ? (
-                  <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
-                    {studentSearchTerm
-                      ? "Nenhum aluno encontrado"
-                      : "Todos os alunos já estão matriculados"}
-                  </p>
-                ) : (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {availableStudents.map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm">{student.name}</p>
-                          <p className="text-xs text-gray-600 truncate">{student.email}</p>
-                        </div>
-                        <button
-                          onClick={() => handleAddStudent(String(student.id))}
-                          disabled={addStudentMutation.isPending}
-                          className="ml-3 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  {isLoadingStudents ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-900 mx-auto"></div>
+                      <p className="mt-2 text-sm text-gray-600">Carregando alunos...</p>
+                    </div>
+                  ) : availableStudents.length === 0 ? (
+                    <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
+                      {studentSearchTerm
+                        ? "Nenhum aluno encontrado"
+                        : "Todos os alunos já estão matriculados"}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {availableStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                         >
-                          Adicionar
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm">{student.name}</p>
+                            <p className="text-xs text-gray-600 truncate">{student.email}</p>
+                          </div>
+                          <button
+                            onClick={() => handleAddStudent(String(student.id))}
+                            disabled={addStudentMutation.isPending}
+                            className="ml-3 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                          >
+                            Adicionar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -821,13 +846,15 @@ export function Classes() {
                 <p className="text-gray-600 text-xs md:text-sm mt-0.5">{selectedClass.name}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleOpenCreateExceptionModal}
-                  className="flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-amber-800 transition-all font-medium text-xs md:text-sm shadow-md hover:shadow-lg flex-shrink-0"
-                >
-                  <FiPlus size={16} className="md:w-4 md:h-4" />
-                  <span className="hidden sm:inline">Adicionar</span>
-                </button>
+                {canManage && (
+                  <button
+                    onClick={handleOpenCreateExceptionModal}
+                    className="flex items-center gap-1.5 md:gap-2 bg-amber-900 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-amber-800 transition-all font-medium text-xs md:text-sm shadow-md hover:shadow-lg flex-shrink-0"
+                  >
+                    <FiPlus size={16} className="md:w-4 md:h-4" />
+                    <span className="hidden sm:inline">Adicionar</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setIsExceptionsModalOpen(false)}
                   className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded-lg transition-all flex-shrink-0"
@@ -852,35 +879,37 @@ export function Classes() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Filtro Radio Buttons */}
-                <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="exceptionsFilter"
-                      value="future"
-                      checked={exceptionsFilter === "future"}
-                      onChange={(e) => setExceptionsFilter(e.target.value)}
-                      className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Datas futuras
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="exceptionsFilter"
-                      value="all"
-                      checked={exceptionsFilter === "all"}
-                      onChange={(e) => setExceptionsFilter(e.target.value)}
-                      className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Todas
-                    </span>
-                  </label>
-                </div>
+                {/* Filtro Radio Buttons - apenas para admin/secretary */}
+                {canManage && (
+                  <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="exceptionsFilter"
+                        value="future"
+                        checked={exceptionsFilter === "future"}
+                        onChange={(e) => setExceptionsFilter(e.target.value)}
+                        className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        Datas futuras
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="exceptionsFilter"
+                        value="all"
+                        checked={exceptionsFilter === "all"}
+                        onChange={(e) => setExceptionsFilter(e.target.value)}
+                        className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500 focus:ring-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        Todas
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 {filteredExceptions.length === 0 ? (
                   <div className="bg-gray-50 rounded-lg p-8 text-center border border-gray-200">
@@ -916,7 +945,7 @@ export function Classes() {
                               Motivo: {exception.reason || "Não informado"}
                             </p>
                           </div>
-                          {isFuture && (
+                          {isFuture && canManage && (
                             <button
                               onClick={() => handleRemoveException(exception.id)}
                               disabled={deleteExceptionMutation.isPending}

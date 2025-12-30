@@ -6,9 +6,9 @@ interface ClassCardProps {
   teacher?: { id: number | string; name: string } | null;
   index?: number;
   formatSchedule: (classItem: Class) => string[] | null;
-  onEdit: (classItem: Class) => void;
-  onDelete: (classItem: Class) => void;
-  onManageStudents: (classItem: Class) => void;
+  onEdit?: (classItem: Class) => void;
+  onDelete?: (classItem: Class) => void;
+  onManageStudents?: (classItem: Class) => void;
   onManageExceptions: (classItem: Class) => void;
   onManageAttendance?: (classItem: Class) => void;
   isMobile?: boolean;
@@ -30,6 +30,12 @@ export function ClassCard({
     ? formatSchedule(classItem) 
     : null;
 
+  const isActive = classItem.active !== false;
+  const statusBadgeClasses = isActive
+    ? "bg-green-100 text-green-800"
+    : "bg-red-100 text-red-800";
+  const statusText = isActive ? "Ativa" : "Inativa";
+
   if (isMobile) {
     return (
       <div
@@ -43,33 +49,29 @@ export function ClassCard({
               <p className="text-xs text-gray-600 mt-0.5">Estilo: {classItem.style}</p>
             )}
             <div className="flex items-center gap-2 mt-1.5">
-              <span
-                className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                  classItem.active !== false
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {classItem.active !== false ? "Ativa" : "Inativa"}
+              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadgeClasses}`}>
+                {statusText}
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-            <button
-              onClick={() => onEdit(classItem)}
-              className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
-              title="Editar"
-            >
-              <FiEdit2 size={16} />
-            </button>
-            <button
-              onClick={() => onDelete(classItem)}
-              className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
-              title="Excluir"
-            >
-              <FiTrash2 size={16} />
-            </button>
-          </div>
+          {onEdit && onDelete && (
+            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              <button
+                onClick={() => onEdit(classItem)}
+                className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
+                title="Editar"
+              >
+                <FiEdit2 size={16} />
+              </button>
+              <button
+                onClick={() => onDelete(classItem)}
+                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
+                title="Excluir"
+              >
+                <FiTrash2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1 mb-2 text-xs text-gray-600">
@@ -97,15 +99,17 @@ export function ClassCard({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-          <button
-            onClick={() => onManageStudents(classItem)}
-            className={`flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
-          >
-            <FiUsers size={14} />
-            <span>Alunos</span>
-          </button>
-          {onManageAttendance && (
+        <div className={`grid gap-2 pt-2 border-t border-gray-100 ${onManageStudents ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {onManageStudents && (
+            <button
+              onClick={() => onManageStudents(classItem)}
+              className={`flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
+            >
+              <FiUsers size={14} />
+              <span>Alunos</span>
+            </button>
+          )}
+          {onManageAttendance ? (
             <>
               <button
                 onClick={() => onManageAttendance(classItem)}
@@ -122,8 +126,7 @@ export function ClassCard({
                 <span>Cancelamentos</span>
               </button>
             </>
-          )}
-          {!onManageAttendance && (
+          ) : (
             <button
               onClick={() => onManageExceptions(classItem)}
               className="flex items-center justify-center gap-1.5 p-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"
@@ -149,33 +152,29 @@ export function ClassCard({
             <p className="text-sm text-gray-600 mb-1">Estilo: {classItem.style}</p>
           )}
           <div className="flex items-center gap-2 mt-2">
-            <span
-              className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                classItem.active !== false
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}
-            >
-              {classItem.active !== false ? "Ativa" : "Inativa"}
+            <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${statusBadgeClasses}`}>
+              {statusText}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-          <button
-            onClick={() => onEdit(classItem)}
-            className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
-            title="Editar"
-          >
-            <FiEdit2 size={18} />
-          </button>
-          <button
-            onClick={() => onDelete(classItem)}
-            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
-            title="Excluir"
-          >
-            <FiTrash2 size={18} />
-          </button>
-        </div>
+        {onEdit && onDelete && (
+          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            <button
+              onClick={() => onEdit(classItem)}
+              className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all hover:scale-110"
+              title="Editar"
+            >
+              <FiEdit2 size={18} />
+            </button>
+            <button
+              onClick={() => onDelete(classItem)}
+              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all hover:scale-110"
+              title="Excluir"
+            >
+              <FiTrash2 size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {classItem.description && (
@@ -207,15 +206,17 @@ export function ClassCard({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100 mt-auto">
-        <button
-          onClick={() => onManageStudents(classItem)}
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
-        >
-          <FiUsers size={14} />
-          <span>Alunos</span>
-        </button>
-        {onManageAttendance && (
+      <div className={`grid gap-2 pt-3 border-t border-gray-100 mt-auto ${onManageStudents ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {onManageStudents && (
+          <button
+            onClick={() => onManageStudents(classItem)}
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors font-medium text-xs ${onManageAttendance ? 'col-span-2' : ''}`}
+          >
+            <FiUsers size={14} />
+            <span>Alunos</span>
+          </button>
+        )}
+        {onManageAttendance ? (
           <>
             <button
               onClick={() => onManageAttendance(classItem)}
@@ -232,8 +233,7 @@ export function ClassCard({
               <span>Cancelamentos</span>
             </button>
           </>
-        )}
-        {!onManageAttendance && (
+        ) : (
           <button
             onClick={() => onManageExceptions(classItem)}
             className="flex items-center justify-center gap-1.5 px-3 py-2 text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors font-medium text-xs"

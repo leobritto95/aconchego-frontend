@@ -7,7 +7,7 @@ import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { EventClickArg, DateSelectArg, DatesSetArg } from "@fullcalendar/core";
 import { MobileDateStrip } from "./MobileDateStrip";
 import { useEvents } from "../hooks/useEvents";
-import { useClasses } from "../hooks/useClasses";
+import { useAllClasses } from "../hooks/useClasses";
 import { CALENDAR_COLORS } from "../constants/calendarColors";
 import { FULLCALENDAR_STYLES } from "./calendar.styles";
 import { CreateChoiceModal, EventModal, ClassModal, ManagementModal } from "./calendar-modals";
@@ -116,7 +116,8 @@ export function Calendar() {
     dateRange?.start,
     dateRange?.end
   );
-  const { classes } = useClasses();
+  // Buscar todas as classes
+  const { classes } = useAllClasses();
   const [userRole, setUserRole] = useState<string | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
@@ -207,7 +208,8 @@ export function Calendar() {
     
     if (isClass) {
       const classId = info.event.extendedProps?.classId || info.event.id;
-      const classData = classes.find((c) => c.id === classId);
+      const classData = classes.find((c) => String(c.id) === String(classId));
+      
       if (classData) {
         setSelectedClass(classData);
         // Definir a data do evento quando é uma classe

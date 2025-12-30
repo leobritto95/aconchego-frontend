@@ -5,7 +5,7 @@ import { Class, User } from "../types";
 import { getPastClassDatesForRange, normalizeDate, formatDate, wasEnrolledOnDate, dateToISOString } from "../utils/dateUtils";
 import { ClassException } from "../types";
 import { DAY_NAMES, MONTH_NAMES } from "../utils/constants";
-import { canManageAttendance } from "../utils/permissions";
+import { canManageAttendance, isStudent } from "../utils/permissions";
 
 const CALENDAR_WEEKS = 6; // Semanas no calendário
 const DAYS_PER_WEEK = 7; // Dias por semana
@@ -122,10 +122,18 @@ export function AttendanceModal({
   }, [calendarRange, selectedClass, exceptions]);
 
   // Filtrar alunos que estavam matriculados na data selecionada
+  // Alunos veem apenas suas próprias presenças
   const enrolledStudents = useMemo(() => {
     if (!selectedDate || !validDatesMap.has(selectedDate)) return [];
-    return students.filter((enrollment) => wasEnrolledOnDate(enrollment.createdAt, selectedDate));
-  }, [students, selectedDate, validDatesMap]);
+    let filtered = students.filter((enrollment) => wasEnrolledOnDate(enrollment.createdAt, selectedDate));
+    
+    // Se for aluno, mostrar apenas sua própria presença
+    if (currentUser && isStudent(currentUser)) {
+      filtered = filtered.filter((enrollment) => String(enrollment.studentId) === String(currentUser.id));
+    }
+    
+    return filtered;
+  }, [students, selectedDate, validDatesMap, currentUser]);
 
   // Resetar modo de edição quando o modal fechar
   useEffect(() => {
@@ -138,11 +146,11 @@ export function AttendanceModal({
   useEffect(() => {
     if (!isOpen) return;
     
-    const canEdit = canManageAttendance(currentUser);
-    if (lastValidDateInfo && !selectedDate && canEdit) {
+    // selecionar a última data para todos
+    if (lastValidDateInfo && !selectedDate) {
       onSelectDate(lastValidDateInfo.date);
     }
-  }, [isOpen, lastValidDateInfo, selectedDate, currentUser, onSelectDate]);
+  }, [isOpen, lastValidDateInfo, selectedDate, onSelectDate]);
 
   // Memorizar hoje uma vez para evitar recálculos
   const today = useMemo(() => normalizeDate(new Date()), []);
@@ -274,7 +282,9 @@ export function AttendanceModal({
   if (!isOpen) return null;
 
   const canEdit = canManageAttendance(currentUser);
-  const isEditMode = canEdit && isEditing;
+  // Alunos não podem editar presenças, apenas visualizar
+  const canEditForCurrentUser = canEdit && !isStudent(currentUser);
+  const isEditMode = canEditForCurrentUser && isEditing;
   const hasSelectedDate = !!selectedDate;
   const selectedDateObj = selectedDate ? validDatesMap.get(selectedDate) : null;
   const hasStudents = enrolledStudents.length > 0;
@@ -577,7 +587,7 @@ export function AttendanceModal({
               </button>
             </div>
           )}
-          {canEdit && !isEditing && (
+          {canEditForCurrentUser && !isEditing && (
             <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-200">
               <button
                 type="button"
@@ -593,6 +603,17 @@ export function AttendanceModal({
               >
                 <FiEdit2 className="w-4 h-4" />
                 Editar
+              </button>
+            </div>
+          )}
+          {!canEditForCurrentUser && (
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+              >
+                Fechar
               </button>
             </div>
           )}

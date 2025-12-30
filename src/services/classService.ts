@@ -1,9 +1,12 @@
 import { apiRequest } from './axios'
-import { Class } from '../types'
+import { Class, User } from '../types'
 
 export class ClassService {
-  static async getClasses() {
-    return apiRequest<Class[]>('get', '/classes')
+  static async getClasses(params?: { studentId?: string; teacherId?: string }) {
+    const queryParams: Record<string, string> = {}
+    if (params?.studentId) queryParams.studentId = params.studentId
+    if (params?.teacherId) queryParams.teacherId = params.teacherId
+    return apiRequest<Class[]>('get', '/classes', undefined, Object.keys(queryParams).length > 0 ? queryParams : undefined)
   }
 
   static async getClassById(id: string) {
@@ -31,11 +34,11 @@ export class ClassService {
   }
 
   static async getAvailableStudents(classId: string, params?: { search?: string; page?: number; limit?: number }) {
-    const queryParams: any = {}
+    const queryParams: Record<string, string | number> = {}
     if (params?.search) queryParams.search = params.search
     if (params?.page) queryParams.page = params.page
     if (params?.limit) queryParams.limit = params.limit
-    return apiRequest<{ data: any[]; page: number; limit: number; total: number; totalPages: number }>('get', `/classes/${classId}/available-students`, undefined, queryParams)
+    return apiRequest<{ data: User[]; page: number; limit: number; total: number; totalPages: number }>('get', `/classes/${classId}/available-students`, undefined, Object.keys(queryParams).length > 0 ? queryParams : undefined)
   }
 }
 

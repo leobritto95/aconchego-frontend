@@ -1,6 +1,7 @@
 import { FileUser, House, Newspaper, Receipt, CreditCard, Users, BookOpen } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { canManageUsers, canViewClasses } from "../utils/permissions";
 import logo from "../assets/logo.png";
 
 export function SideMenu() {
@@ -60,35 +61,35 @@ export function SideMenu() {
               <span className="ml-3">Início</span>
             </button>
           </li>
-          {(user?.role === "secretary" || user?.role === "admin") && (
-            <>
-              <li>
-                <button
-                  className={`flex items-center w-full p-2 rounded-lg group border-l-4 ${
-                    isActive("/users")
-                      ? "text-amber-900 hover:bg-amber-100 border-l-amber-900 bg-amber-100 font-bold"
-                      : "text-gray-700 hover:bg-gray-200 border-l-transparent"
-                  }`}
-                  onClick={() => goToPage("users")}
-                >
-                  <Users className={`w-5 h-5 ${isActive("/users") ? "text-amber-900" : "text-gray-700"}`} />
-                  <span className="ml-3">Usuários</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`flex items-center w-full p-2 rounded-lg group border-l-4 ${
-                    isActive("/classes")
-                      ? "text-amber-900 hover:bg-amber-100 border-l-amber-900 bg-amber-100 font-bold"
-                      : "text-gray-700 hover:bg-gray-200 border-l-transparent"
-                  }`}
-                  onClick={() => goToPage("classes")}
-                >
-                  <BookOpen className={`w-5 h-5 ${isActive("/classes") ? "text-amber-900" : "text-gray-700"}`} />
-                  <span className="ml-3">Turmas</span>
-                </button>
-              </li>
-            </>
+          {canManageUsers(user || null) && (
+            <li>
+              <button
+                className={`flex items-center w-full p-2 rounded-lg group border-l-4 ${
+                  isActive("/users")
+                    ? "text-amber-900 hover:bg-amber-100 border-l-amber-900 bg-amber-100 font-bold"
+                    : "text-gray-700 hover:bg-gray-200 border-l-transparent"
+                }`}
+                onClick={() => goToPage("users")}
+              >
+                <Users className={`w-5 h-5 ${isActive("/users") ? "text-amber-900" : "text-gray-700"}`} />
+                <span className="ml-3">Usuários</span>
+              </button>
+            </li>
+          )}
+          {canViewClasses(user || null) && (
+            <li>
+              <button
+                className={`flex items-center w-full p-2 rounded-lg group border-l-4 ${
+                  isActive("/classes")
+                    ? "text-amber-900 hover:bg-amber-100 border-l-amber-900 bg-amber-100 font-bold"
+                    : "text-gray-700 hover:bg-gray-200 border-l-transparent"
+                }`}
+                onClick={() => goToPage("classes")}
+              >
+                <BookOpen className={`w-5 h-5 ${isActive("/classes") ? "text-amber-900" : "text-gray-700"}`} />
+                <span className="ml-3">Turmas</span>
+              </button>
+            </li>
           )}
           <li>
             <button

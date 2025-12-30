@@ -1,11 +1,56 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClassService } from '../services/classService'
 import { Class } from '../types'
+import { useAuth } from './useAuth'
+import { isTeacher, isStudent } from '../utils/permissions'
 
 export function useClasses() {
+  const { user: currentUser } = useAuth()
+  
+  // Determinar query params baseado no papel do usuário
+  const queryParams = useMemo(() => {
+    if (!currentUser) return undefined
+    
+    if (isStudent(currentUser)) {
+      return {
+        studentId: String(currentUser.id),
+      }
+    }
+    
+    if (isTeacher(currentUser)) {
+      return {
+        teacherId: String(currentUser.id),
+      }
+    }
+    
+    // Admin e secretary não precisam de filtros
+    return undefined
+  }, [currentUser])
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['classes'],
+    queryKey: ['classes', queryParams],
     queryFn: async () => {
+      const response = await ClassService.getClasses(queryParams)
+      return response.success ? response.data : []
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  })
+
+  return {
+    classes: data || [],
+    isLoading,
+    error: error?.message || null,
+    refetch,
+  }
+}
+
+// Hook para buscar todas as classes (usado no calendário onde todas as classes são visíveis)
+export function useAllClasses() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['classes', 'all'],
+    queryFn: async () => {
+      // Sem query params = busca todas as classes
       const response = await ClassService.getClasses()
       return response.success ? response.data : []
     },
