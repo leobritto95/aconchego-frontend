@@ -346,58 +346,13 @@ export function AttendanceModal({
     setCurrentMonth(new Date(lastValidDateInfo.date));
   };
 
-  const navigateToPreviousDate = () => {
-    if (!selectedDate || isEditMode || isPending) return;
-    
-    const today = normalizeDate(new Date());
-    const selectedDateObj = parseDateString(selectedDate);
-    const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
-    
-    // Buscar datas válidas antes da data selecionada (busca incremental)
-    const SEARCH_RANGE_DAYS = 30;
-    const MAX_ATTEMPTS = 5; // Limitar tentativas para evitar loops infinitos
-    
-    let searchStartNormalized: Date;
-    const initialSearchStart = new Date(selectedDateObj);
-    initialSearchStart.setDate(initialSearchStart.getDate() - SEARCH_RANGE_DAYS);
-    searchStartNormalized = initialSearchStart < classStartDate ? classStartDate : normalizeDate(initialSearchStart);
-    
-    let dates: PastClassDateInfo[] = [];
-    let attempts = 0;
-    
-    // Buscar incrementalmente até encontrar datas ou atingir limite
-    while (dates.length === 0 && searchStartNormalized >= classStartDate && attempts < MAX_ATTEMPTS) {
-      dates = getPastClassDatesForRange(
-        selectedClass,
-        exceptions,
-        searchStartNormalized,
-        selectedDateObj
-      ).filter(d => dateToISOString(d.date) !== selectedDate);
-      
-      if (dates.length === 0) {
-        const newSearchStart = new Date(searchStartNormalized);
-        newSearchStart.setDate(newSearchStart.getDate() - SEARCH_RANGE_DAYS);
-        const newSearchStartNormalized = newSearchStart < classStartDate ? classStartDate : normalizeDate(newSearchStart);
-        if (newSearchStartNormalized.getTime() === searchStartNormalized.getTime()) break; // Não consegue ir mais para trás
-        searchStartNormalized = newSearchStartNormalized;
-        attempts++;
-      }
-    }
-
-    const previousDate = dates[0] ?? null;
-    if (previousDate) {
-      onSelectDate(previousDate.date);
-      setCurrentMonth(new Date(previousDate.date));
-    }
-  };
-
-  const navigateToNextDate = () => {
-    if (!selectedDate || isEditMode || isPending) return;
+  // Função auxiliar para buscar próxima data
+  const getNextDate = useMemo((): PastClassDateInfo | null => {
+    if (!selectedDate) return null;
     
     const today = normalizeDate(new Date());
     const selectedDateObj = parseDateString(selectedDate);
     
-    // Buscar datas válidas depois da data selecionada
     const SEARCH_RANGE_DAYS = 30;
     const searchEnd = new Date(selectedDateObj);
     searchEnd.setDate(searchEnd.getDate() + SEARCH_RANGE_DAYS);
@@ -410,14 +365,66 @@ export function AttendanceModal({
       searchEndNormalized
     );
     
-    // Encontrar a próxima data (mais próxima depois da selecionada)
     const nextDates = dates.filter(d => dateToISOString(d.date) !== selectedDate);
-    const nextDate = nextDates.length > 0 ? nextDates[0] : null;
+    return nextDates.length > 0 ? nextDates[0] : null;
+  }, [selectedDate, selectedClass, exceptions]);
+
+  // Função auxiliar para buscar data anterior
+  const getPreviousDate = useMemo((): PastClassDateInfo | null => {
+    if (!selectedDate) return null;
     
-    if (nextDate) {
-      onSelectDate(nextDate.date);
-      setCurrentMonth(new Date(nextDate.date));
+    const today = normalizeDate(new Date());
+    const selectedDateObj = parseDateString(selectedDate);
+    const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
+    
+    const SEARCH_RANGE_DAYS = 30;
+    const MAX_ATTEMPTS = 5;
+    
+    let searchStartNormalized: Date;
+    const initialSearchStart = new Date(selectedDateObj);
+    initialSearchStart.setDate(initialSearchStart.getDate() - SEARCH_RANGE_DAYS);
+    searchStartNormalized = initialSearchStart < classStartDate ? classStartDate : normalizeDate(initialSearchStart);
+    
+    let dates: PastClassDateInfo[] = [];
+    let attempts = 0;
+    
+    while (dates.length === 0 && searchStartNormalized >= classStartDate && attempts < MAX_ATTEMPTS) {
+      dates = getPastClassDatesForRange(
+        selectedClass,
+        exceptions,
+        searchStartNormalized,
+        selectedDateObj
+      ).filter(d => dateToISOString(d.date) !== selectedDate);
+      
+      if (dates.length === 0) {
+        const newSearchStart = new Date(searchStartNormalized);
+        newSearchStart.setDate(newSearchStart.getDate() - SEARCH_RANGE_DAYS);
+        const newSearchStartNormalized = newSearchStart < classStartDate ? classStartDate : normalizeDate(newSearchStart);
+        if (newSearchStartNormalized.getTime() === searchStartNormalized.getTime()) break;
+        searchStartNormalized = newSearchStartNormalized;
+        attempts++;
+      }
     }
+    
+    return dates.length > 0 ? dates[0] : null;
+  }, [selectedDate, selectedClass, exceptions]);
+
+  // Verificar se há próxima/anterior data disponível
+  const hasNextDate = !!getNextDate;
+  const hasPreviousDate = !!getPreviousDate;
+
+  const navigateToPreviousDate = () => {
+    if (!selectedDate || !getPreviousDate || isEditMode || isPending) return;
+    
+    onSelectDate(getPreviousDate.date);
+    setCurrentMonth(new Date(getPreviousDate.date));
+  };
+
+  const navigateToNextDate = () => {
+    if (!selectedDate || !getNextDate || isEditMode || isPending) return;
+    
+    onSelectDate(getNextDate.date);
+    setCurrentMonth(new Date(getNextDate.date));
   };
 
   if (!isOpen) return null;
@@ -435,10 +442,11 @@ export function AttendanceModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg md:rounded-xl shadow-2xl p-4 md:p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 relative z-[111]"
+        className="bg-white rounded-lg md:rounded-xl shadow-2xl max-w-5xl w-full h-[85vh] min-h-[600px] max-h-[90vh] flex flex-col animate-in zoom-in-95 relative z-[111] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-200">
+        {/* Header fixo */}
+        <div className="flex justify-between items-start p-4 md:p-6 pb-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex-1 min-w-0 pr-2">
             <div className="flex items-center gap-2 mb-1">
               <FiUsers className="w-5 h-5 text-amber-600 flex-shrink-0" />
@@ -457,26 +465,34 @@ export function AttendanceModal({
           </button>
         </div>
 
-        <div className="space-y-5">
-          {/* Seleção de Data */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-              <FiCalendar className="w-4 h-4 text-amber-600" />
-              Selecione uma data <span className="text-red-500">*</span>
-            </label>
+        {/* Conteúdo fixo - Seleção de Data */}
+        {!lastValidDateInfo ? (
+          <div className="flex-1 flex items-center justify-center p-4 md:p-6">
+            <div className="text-center w-full max-w-sm">
+              <FiCalendar className="mx-auto text-gray-300 w-10 h-10 md:w-12 md:h-12 mb-3" />
+              <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
+                Nenhuma data disponível
+              </p>
+              <p className="text-xs md:text-sm text-gray-500">
+                Não há datas passadas disponíveis para esta turma.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-shrink-0 p-4 md:p-6 pb-4 border-b border-gray-200">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <FiCalendar className="w-4 h-4 text-amber-600" />
+                Selecione uma data <span className="text-red-500">*</span>
+              </label>
 
-            {!lastValidDateInfo ? (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 text-center">
-                <p className="text-sm text-gray-600">Não há datas passadas disponíveis para esta turma</p>
-              </div>
-            ) : (
               <div className="relative">
                 <div className="inline-flex items-stretch border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm hover:border-amber-400 transition-colors">
                   {/* Botão de navegação anterior */}
                   <button
                     type="button"
                     onClick={navigateToPreviousDate}
-                    disabled={!selectedDate || isPending || isEditMode}
+                    disabled={!selectedDate || !hasPreviousDate || isPending || isEditMode}
                     className="px-3 py-2.5 md:py-3 border-r border-gray-300 hover:bg-amber-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent flex items-center justify-center"
                     title="Data anterior"
                   >
@@ -512,7 +528,7 @@ export function AttendanceModal({
                   <button
                     type="button"
                     onClick={navigateToNextDate}
-                    disabled={!selectedDate || isPending || isEditMode}
+                    disabled={!selectedDate || !hasNextDate || isPending || isEditMode}
                     className="px-3 py-2.5 md:py-3 hover:bg-amber-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent flex items-center justify-center"
                     title="Próxima data"
                   >
@@ -632,41 +648,60 @@ export function AttendanceModal({
                     document.body
                   )}
               </div>
-            )}
+            </div>
           </div>
+        )}
 
-          {/* Tabela de Alunos */}
-          {hasSelectedDate && (
-            <div className="border-t border-gray-200 pt-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+        {/* Área de Alunos com scroll */}
+        {hasSelectedDate && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-shrink-0 px-4 md:px-6 pt-4 pb-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <FiUser className="w-4 h-4 text-amber-600" />
                 Alunos ({enrolledStudents.length})
               </label>
-
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 flex flex-col">
               {isLoadingStudents ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-900 mx-auto"></div>
-                  <p className="mt-2 text-sm text-gray-600">Carregando alunos...</p>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-900 mx-auto"></div>
+                    <p className="mt-2 text-sm text-gray-600">Carregando alunos...</p>
+                  </div>
                 </div>
               ) : !hasStudents ? (
-                <div className="bg-gray-50 rounded-lg p-6 text-center border border-gray-200">
-                  <FiUsers className="mx-auto text-gray-300 mb-2 w-8 h-8" />
-                  <p className="text-sm text-gray-600">
-                    {selectedDate
-                      ? `Nenhum aluno estava matriculado no dia ${formatDate(selectedDate)}`
-                      : "Não há alunos matriculados nesta turma"}
-                  </p>
+                <div className="flex-1 flex items-center justify-center py-8">
+                  <div className="text-center w-full max-w-sm">
+                    <FiUsers className="mx-auto text-gray-300 w-10 h-10 md:w-12 md:h-12 mb-3" />
+                    <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
+                      {selectedDate
+                        ? "Nenhum aluno matriculado"
+                        : "Nenhum aluno encontrado"}
+                    </p>
+                    <p className="text-xs md:text-sm text-gray-500">
+                      {selectedDate
+                        ? `Não havia alunos matriculados no dia ${formatDate(selectedDate)}.`
+                        : "Não há alunos matriculados nesta turma no momento."}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <>
                   {attendances.size === 0 && !isEditMode && selectedDate ? (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                      <FiCalendar className="mx-auto text-gray-400 mb-3 w-10 h-10" />
-                      <p className="text-sm font-medium text-gray-900 mb-1">Nenhuma presença registrada</p>
-                      <p className="text-xs text-gray-600">Não há presenças registradas para esta data. Clique em "Editar" para registrar as presenças.</p>
+                    <div className="flex-1 flex items-center justify-center py-8">
+                      <div className="text-center w-full max-w-sm">
+                        <FiCalendar className="mx-auto text-gray-300 w-10 h-10 md:w-12 md:h-12 mb-3" />
+                        <p className="text-sm md:text-base font-medium text-gray-700 mb-1">
+                          Nenhuma presença registrada
+                        </p>
+                        <p className="text-xs md:text-sm text-gray-500">
+                          Clique em "Editar" para registrar as presenças.
+                        </p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-3">
                       {enrolledStudents.map((enrollment) => {
                         const studentId = enrollment.studentId;
                         const currentStatus = attendances.get(studentId) || (isEditMode ? 'ABSENT' : null);
@@ -684,17 +719,17 @@ export function AttendanceModal({
                                 : 'border-gray-200 hover:border-gray-300'
                             } ${isEditMode ? 'hover:shadow-md' : 'hover:shadow-sm'}`}
                           >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 md:p-4">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3 p-2.5 md:p-4">
                               {/* Informações do Aluno */}
                               <div className="flex-1 min-w-0">
-                                <p className="text-base md:text-sm font-semibold text-gray-900">{studentName}</p>
+                                <p className="text-sm md:text-base font-semibold text-gray-900">{studentName}</p>
                                 <p className="text-xs text-gray-500 mt-0.5 truncate">{studentEmail}</p>
                               </div>
 
                               {/* Botões de Presença/Ausência */}
                               <div className="flex gap-2 md:flex-shrink-0">
                                 <label
-                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${
+                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1 md:gap-1.5 py-1.5 md:py-2 px-2.5 md:px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
                                     isEditMode
                                       ? currentStatus === 'PRESENT'
                                         ? 'border-green-600 bg-green-600 text-white shadow-sm hover:bg-green-700 hover:border-green-700'
@@ -712,11 +747,11 @@ export function AttendanceModal({
                                     disabled={!isEditMode || isPending}
                                     className="sr-only"
                                   />
-                                  <FiCheckCircle className="w-4 h-4" />
-                                  <span className="text-xs md:text-xs">Presente</span>
+                                  <FiCheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                  <span>Presente</span>
                                 </label>
                                 <label
-                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border-2 cursor-pointer transition-all font-medium ${
+                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1 md:gap-1.5 py-1.5 md:py-2 px-2.5 md:px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
                                     isEditMode
                                       ? currentStatus === 'ABSENT'
                                         ? 'border-red-600 bg-red-600 text-white shadow-sm hover:bg-red-700 hover:border-red-700'
@@ -734,8 +769,8 @@ export function AttendanceModal({
                                     disabled={!isEditMode || isPending}
                                     className="sr-only"
                                   />
-                                  <FiX className="w-4 h-4" />
-                                  <span className="text-xs md:text-xs">Ausente</span>
+                                  <FiX className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                  <span>Ausente</span>
                                 </label>
                               </div>
                             </div>
@@ -747,11 +782,13 @@ export function AttendanceModal({
                 </>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Botões de ação */}
+        {/* Botões de ação fixos */}
+        <div className="flex-shrink-0 border-t border-gray-200 p-4 md:p-6 pt-4">
           {isEditMode && (
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -783,7 +820,7 @@ export function AttendanceModal({
             </div>
           )}
           {canEditForCurrentUser && !isEditing && (
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
@@ -802,7 +839,7 @@ export function AttendanceModal({
             </div>
           )}
           {!canEditForCurrentUser && (
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
