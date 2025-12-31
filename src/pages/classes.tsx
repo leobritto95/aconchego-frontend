@@ -461,8 +461,8 @@ export function Classes() {
       return [];
     }
 
-    const startDate = selectedClass.startDate ? normalizeDate(new Date(selectedClass.startDate)) : today;
-    const endDate = selectedClass.endDate ? normalizeDate(new Date(selectedClass.endDate)) : null;
+    const startDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
+    const endDate = selectedClass.endDate ? normalizeDate(selectedClass.endDate) : null;
     
     // Criar set de datas já canceladas
     const cancelledDates = new Set(

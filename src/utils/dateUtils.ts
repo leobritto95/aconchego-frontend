@@ -36,9 +36,21 @@ export function toDateTimeLocal(date: Date | string): string {
 }
 
 /**
+ * Cria uma Date a partir de uma string YYYY-MM-DD de forma segura (sem problemas de timezone)
+ */
+export function parseDateString(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Normaliza uma data removendo horas, minutos, segundos e milissegundos
+ * Para strings no formato YYYY-MM-DD, usa parseDateString para evitar problemas de timezone
  */
 export function normalizeDate(date: Date | string): Date {
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return parseDateString(date);
+  }
   const normalized = new Date(date);
   normalized.setHours(0, 0, 0, 0);
   return normalized;
@@ -186,8 +198,8 @@ export function calculateClassDatesForRange(
   }
 
   const today = normalizeDate(new Date());
-  const classStartDate = classItem.startDate ? normalizeDate(new Date(classItem.startDate)) : today;
-  const classEndDate = classItem.endDate ? normalizeDate(new Date(classItem.endDate)) : null;
+  const classStartDate = classItem.startDate ? normalizeDate(classItem.startDate) : today;
+  const classEndDate = classItem.endDate ? normalizeDate(classItem.endDate) : null;
 
   const pastDates: PastClassDateInfo[] = [];
   const now = new Date();
@@ -291,8 +303,8 @@ export function getPastClassDatesForRange(
  * @returns true se estava matriculado na data, false caso contrário
  */
 export function wasEnrolledOnDate(enrollmentCreatedAt: string, targetDate: Date | string): boolean {
-  const enrollmentDate = normalizeDate(new Date(enrollmentCreatedAt));
-  const targetDateNormalized = normalizeDate(typeof targetDate === 'string' ? new Date(targetDate) : targetDate);
+  const enrollmentDate = normalizeDate(enrollmentCreatedAt);
+  const targetDateNormalized = normalizeDate(targetDate);
   
   return enrollmentDate <= targetDateNormalized;
 }
