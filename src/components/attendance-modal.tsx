@@ -1,8 +1,8 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { FiX, FiCalendar, FiCheckCircle, FiCheck, FiUser, FiUsers, FiChevronLeft, FiChevronRight, FiEdit2 } from "react-icons/fi";
+import { FiX, FiCalendar, FiCheckCircle, FiCheck, FiUser, FiUsers, FiChevronLeft, FiChevronRight, FiEdit2, FiChevronsLeft, FiChevronsRight } from "react-icons/fi";
 import { Class, User } from "../types";
-import { getPastClassDatesForRange, normalizeDate, formatDate, wasEnrolledOnDate, dateToISOString } from "../utils/dateUtils";
+import { getPastClassDatesForRange, normalizeDate, formatDate, wasEnrolledOnDate, dateToISOString, parseDateString, PastClassDateInfo } from "../utils/dateUtils";
 import { ClassException } from "../types";
 import { DAY_NAMES, MONTH_NAMES } from "../utils/constants";
 import { canManageAttendance, isStudent } from "../utils/permissions";
@@ -11,6 +11,7 @@ const CALENDAR_WEEKS = 6; // Semanas no calendário
 const DAYS_PER_WEEK = 7; // Dias por semana
 const TOTAL_CALENDAR_DAYS = CALENDAR_WEEKS * DAYS_PER_WEEK; // Total de dias no calendário
 const CALENDAR_OFFSET = 8; // Offset em pixels para posicionar o calendário
+const DATE_SEARCH_RANGE_DAYS = 8; // Range de dias para buscar datas válidas
 
 interface AttendanceModalProps {
   isOpen: boolean;
@@ -59,26 +60,65 @@ export function AttendanceModal({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
 
-  // Calcular a última data válida para inicializar o mês do calendário
-  // Busca apenas no último mês para otimização
+  // Calcular a última data válida
   const lastValidDateInfo = useMemo(() => {
     const today = normalizeDate(new Date());
-    const classStartDate = selectedClass.startDate ? normalizeDate(new Date(selectedClass.startDate)) : today;
+    const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
+    const classEndDate = selectedClass.endDate ? normalizeDate(selectedClass.endDate) : null;
     
-    // Buscar apenas no último mês (ou até o startDate, o que for menor)
-    const lastMonth = new Date(today);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const searchStart = lastMonth < classStartDate ? classStartDate : lastMonth;
+    // Buscar nos últimos 30 dias primeiro
+    const SEARCH_RANGE_DAYS = 30;
+    const searchStart = new Date(today);
+    searchStart.setDate(searchStart.getDate() - DATE_SEARCH_RANGE_DAYS);
+    const searchStartNormalized = searchStart < classStartDate ? classStartDate : normalizeDate(searchStart);
     
-    const dates = getPastClassDatesForRange(selectedClass, exceptions, searchStart, today);
+    const dates = getPastClassDatesForRange(selectedClass, exceptions, searchStartNormalized, today);
     
-    // Se não encontrou no último mês, buscar no histórico completo
-    if (dates.length === 0 && searchStart > classStartDate) {
-      const allDates = getPastClassDatesForRange(selectedClass, exceptions, classStartDate, searchStart);
-      return allDates[0] || null;
+    // Se não encontrou, buscar no range de 30 dias antes do endDate até hoje
+    if (dates.length === 0 && classEndDate && classEndDate <= today) {
+      const endDateSearchStart = new Date(classEndDate);
+      endDateSearchStart.setDate(endDateSearchStart.getDate() - SEARCH_RANGE_DAYS);
+      const endDateSearchStartNormalized = endDateSearchStart < classStartDate ? classStartDate : normalizeDate(endDateSearchStart);
+      
+      const endDateSearchDates = getPastClassDatesForRange(selectedClass, exceptions, endDateSearchStartNormalized, today);
+      return endDateSearchDates[0] || null;
     }
     
     return dates[0] || null;
+  }, [selectedClass, exceptions]);
+
+  // Calcular primeira data válida (mais antiga)
+  const firstValidDate = useMemo(() => {
+    const today = normalizeDate(new Date());
+    const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
+    
+    // Buscar nos primeiros 30 dias após startDate
+    const SEARCH_RANGE_DAYS = 30;
+    const searchEnd = new Date(classStartDate);
+    searchEnd.setDate(searchEnd.getDate() + SEARCH_RANGE_DAYS);
+    const searchEndNormalized = searchEnd > today ? today : normalizeDate(searchEnd);
+    
+    const dates = getPastClassDatesForRange(selectedClass, exceptions, classStartDate, searchEndNormalized);
+    
+    // Se não encontrou, estender a busca
+    if (dates.length === 0 && searchEndNormalized < today) {
+      const extendedSearchEnd = new Date(searchEndNormalized);
+      extendedSearchEnd.setDate(extendedSearchEnd.getDate() + SEARCH_RANGE_DAYS);
+      const extendedSearchEndNormalized = extendedSearchEnd > today ? today : normalizeDate(extendedSearchEnd);
+      
+      const extendedDates = getPastClassDatesForRange(
+        selectedClass,
+        exceptions,
+        searchEndNormalized,
+        extendedSearchEndNormalized
+      );
+      
+      if (extendedDates.length > 0) {
+        return extendedDates[extendedDates.length - 1];
+      }
+    }
+    
+    return dates.length > 0 ? dates[dates.length - 1] : null;
   }, [selectedClass, exceptions]);
 
   // Inicializar currentMonth com o mês da última data válida, ou mês atual se não houver
@@ -112,19 +152,36 @@ export function AttendanceModal({
     }
   }, [lastValidDateInfo]);
 
-  // Criar map de datas válidas calculadas apenas para o range visível no calendário
+  // Criar map de datas válidas apenas para o range visível no calendário
   const validDatesMap = useMemo(() => {
-    const validDates = getPastClassDatesForRange(selectedClass, exceptions, calendarRange.rangeStart, calendarRange.rangeEnd);
+    const validDates = getPastClassDatesForRange(
+      selectedClass,
+      exceptions,
+      calendarRange.rangeStart,
+      calendarRange.rangeEnd
+    );
     
     return new Map(
       validDates.map((d) => [dateToISOString(d.date), d])
     );
   }, [calendarRange, selectedClass, exceptions]);
 
+  // Obter schedule da data selecionada
+  const selectedDateSchedule = useMemo(() => {
+    if (!selectedDate) return null;
+    
+    const dateObj = parseDateString(selectedDate);
+    const dayOfWeek = dateObj.getDay();
+    
+    // Buscar schedule diretamente do scheduleTimes da turma
+    return selectedClass.scheduleTimes?.[dayOfWeek.toString()] || null;
+  }, [selectedDate, selectedClass.scheduleTimes]);
+
   // Filtrar alunos que estavam matriculados na data selecionada
   // Alunos veem apenas suas próprias presenças
   const enrolledStudents = useMemo(() => {
-    if (!selectedDate || !validDatesMap.has(selectedDate)) return [];
+    if (!selectedDate) return [];
+    
     let filtered = students.filter((enrollment) => wasEnrolledOnDate(enrollment.createdAt, selectedDate));
     
     // Se for aluno, mostrar apenas sua própria presença
@@ -133,7 +190,7 @@ export function AttendanceModal({
     }
     
     return filtered;
-  }, [students, selectedDate, validDatesMap, currentUser]);
+  }, [students, selectedDate, currentUser]);
 
   // Resetar modo de edição quando o modal fechar
   useEffect(() => {
@@ -157,7 +214,7 @@ export function AttendanceModal({
   
   // Calcular período válido da turma para limitar navegação
   const classPeriod = useMemo(() => {
-    const startDate = selectedClass.startDate ? normalizeDate(new Date(selectedClass.startDate)) : null;
+    const startDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : null;
     return { startDate, today };
   }, [selectedClass.startDate, today]);
 
@@ -279,6 +336,90 @@ export function AttendanceModal({
     });
   };
 
+  const navigateToFirstDate = () => {
+    if (!firstValidDate || isEditMode || isPending) return;
+    setCurrentMonth(new Date(firstValidDate.date));
+  };
+
+  const navigateToLastDate = () => {
+    if (!lastValidDateInfo || isEditMode || isPending) return;
+    setCurrentMonth(new Date(lastValidDateInfo.date));
+  };
+
+  const navigateToPreviousDate = () => {
+    if (!selectedDate || isEditMode || isPending) return;
+    
+    const today = normalizeDate(new Date());
+    const selectedDateObj = parseDateString(selectedDate);
+    const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
+    
+    // Buscar datas válidas antes da data selecionada (busca incremental)
+    const SEARCH_RANGE_DAYS = 30;
+    const MAX_ATTEMPTS = 5; // Limitar tentativas para evitar loops infinitos
+    
+    let searchStartNormalized: Date;
+    const initialSearchStart = new Date(selectedDateObj);
+    initialSearchStart.setDate(initialSearchStart.getDate() - SEARCH_RANGE_DAYS);
+    searchStartNormalized = initialSearchStart < classStartDate ? classStartDate : normalizeDate(initialSearchStart);
+    
+    let dates: PastClassDateInfo[] = [];
+    let attempts = 0;
+    
+    // Buscar incrementalmente até encontrar datas ou atingir limite
+    while (dates.length === 0 && searchStartNormalized >= classStartDate && attempts < MAX_ATTEMPTS) {
+      dates = getPastClassDatesForRange(
+        selectedClass,
+        exceptions,
+        searchStartNormalized,
+        selectedDateObj
+      ).filter(d => dateToISOString(d.date) !== selectedDate);
+      
+      if (dates.length === 0) {
+        const newSearchStart = new Date(searchStartNormalized);
+        newSearchStart.setDate(newSearchStart.getDate() - SEARCH_RANGE_DAYS);
+        const newSearchStartNormalized = newSearchStart < classStartDate ? classStartDate : normalizeDate(newSearchStart);
+        if (newSearchStartNormalized.getTime() === searchStartNormalized.getTime()) break; // Não consegue ir mais para trás
+        searchStartNormalized = newSearchStartNormalized;
+        attempts++;
+      }
+    }
+
+    const previousDate = dates[0] ?? null;
+    if (previousDate) {
+      onSelectDate(previousDate.date);
+      setCurrentMonth(new Date(previousDate.date));
+    }
+  };
+
+  const navigateToNextDate = () => {
+    if (!selectedDate || isEditMode || isPending) return;
+    
+    const today = normalizeDate(new Date());
+    const selectedDateObj = parseDateString(selectedDate);
+    
+    // Buscar datas válidas depois da data selecionada
+    const SEARCH_RANGE_DAYS = 30;
+    const searchEnd = new Date(selectedDateObj);
+    searchEnd.setDate(searchEnd.getDate() + SEARCH_RANGE_DAYS);
+    const searchEndNormalized = searchEnd > today ? today : normalizeDate(searchEnd);
+    
+    const dates = getPastClassDatesForRange(
+      selectedClass,
+      exceptions,
+      selectedDateObj,
+      searchEndNormalized
+    );
+    
+    // Encontrar a próxima data (mais próxima depois da selecionada)
+    const nextDates = dates.filter(d => dateToISOString(d.date) !== selectedDate);
+    const nextDate = nextDates.length > 0 ? nextDates[0] : null;
+    
+    if (nextDate) {
+      onSelectDate(nextDate.date);
+      setCurrentMonth(new Date(nextDate.date));
+    }
+  };
+
   if (!isOpen) return null;
 
   const canEdit = canManageAttendance(currentUser);
@@ -286,7 +427,6 @@ export function AttendanceModal({
   const canEditForCurrentUser = canEdit && !isStudent(currentUser);
   const isEditMode = canEditForCurrentUser && isEditing;
   const hasSelectedDate = !!selectedDate;
-  const selectedDateObj = selectedDate ? validDatesMap.get(selectedDate) : null;
   const hasStudents = enrolledStudents.length > 0;
 
   return (
@@ -331,21 +471,54 @@ export function AttendanceModal({
               </div>
             ) : (
               <div className="relative">
-                {/* Input que abre o calendário */}
-                <button
-                  ref={buttonRef}
-                  type="button"
-                  onClick={handleToggleCalendar}
-                  disabled={isPending || isEditMode}
-                  className="w-full md:w-auto md:max-w-md px-4 py-2.5 md:px-5 md:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between gap-3"
-                >
-                  <span className={selectedDate ? "text-gray-900" : "text-gray-500"}>
-                    {selectedDate && selectedDateObj
-                      ? `${formatDate(selectedDateObj.date)}${selectedDateObj.schedule ? ` - ${selectedDateObj.schedule.startTime} às ${selectedDateObj.schedule.endTime}` : ""}`
-                      : "Selecione uma data"}
-                  </span>
-                  <FiCalendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                </button>
+                <div className="inline-flex items-stretch border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm hover:border-amber-400 transition-colors">
+                  {/* Botão de navegação anterior */}
+                  <button
+                    type="button"
+                    onClick={navigateToPreviousDate}
+                    disabled={!selectedDate || isPending || isEditMode}
+                    className="px-3 py-2.5 md:py-3 border-r border-gray-300 hover:bg-amber-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent flex items-center justify-center"
+                    title="Data anterior"
+                  >
+                    <FiChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  
+                  {/* Input que abre o calendário */}
+                  <button
+                    ref={buttonRef}
+                    type="button"
+                    onClick={handleToggleCalendar}
+                    disabled={isPending || isEditMode}
+                    className="flex-initial min-w-[200px] md:min-w-[300px] max-w-full px-4 py-2.5 md:px-5 md:py-3 border-r border-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between gap-3 hover:bg-amber-50/30 transition-all"
+                  >
+                    <div className="flex flex-col items-start min-w-0 flex-1">
+                      {selectedDate ? (
+                        <>
+                          <span className="text-gray-900 font-semibold text-sm md:text-base truncate w-full">
+                            {formatDate(selectedDate)}
+                          </span>
+                          <span className="text-gray-600 text-xs md:text-sm">
+                            {selectedDateSchedule?.startTime} às {selectedDateSchedule?.endTime}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">Selecione uma data</span>
+                      )}
+                    </div>
+                    <FiCalendar className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  </button>
+                  
+                  {/* Botão de navegação próxima */}
+                  <button
+                    type="button"
+                    onClick={navigateToNextDate}
+                    disabled={!selectedDate || isPending || isEditMode}
+                    className="px-3 py-2.5 md:py-3 hover:bg-amber-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent flex items-center justify-center"
+                    title="Próxima data"
+                  >
+                    <FiChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
 
                 {/* Calendário dropdown */}
                 {isCalendarOpen &&
@@ -359,26 +532,48 @@ export function AttendanceModal({
                       }}
                     >
                       {/* Cabeçalho do calendário */}
-                      <div className="flex items-center justify-between mb-3">
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth("prev")}
-                          disabled={!canNavigatePrev}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                          <FiChevronLeft className="w-4 h-4 text-gray-600" />
-                        </button>
+                      <div className="flex items-center justify-between mb-3 gap-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={navigateToFirstDate}
+                            disabled={!firstValidDate || isPending || isEditMode}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            title="Primeira data"
+                          >
+                            <FiChevronsLeft className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigateMonth("prev")}
+                            disabled={!canNavigatePrev}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          >
+                            <FiChevronLeft className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </div>
                         <h4 className="text-sm font-semibold text-gray-900">
                           {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                         </h4>
-                        <button
-                          type="button"
-                          onClick={() => navigateMonth("next")}
-                          disabled={!canNavigateNext}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                          <FiChevronRight className="w-4 h-4 text-gray-600" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => navigateMonth("next")}
+                            disabled={!canNavigateNext}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          >
+                            <FiChevronRight className="w-4 h-4 text-gray-600" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={navigateToLastDate}
+                            disabled={!lastValidDateInfo || isPending || isEditMode}
+                            className="p-1.5 hover:bg-gray-100 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            title="Última data"
+                          >
+                            <FiChevronsRight className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Dias da semana */}
@@ -404,9 +599,9 @@ export function AttendanceModal({
                             <button
                               key={index}
                               type="button"
-                            onClick={() => handleDateClick(day.date, day.isValid)}
-                            disabled={!day.isValid || isPending || isEditMode}
-                            className={`
+                              onClick={() => handleDateClick(day.date, day.isValid)}
+                              disabled={!day.isValid || isPending || isEditMode}
+                              className={`
                               aspect-square flex flex-col items-center justify-center rounded transition-all text-[11px] min-h-[36px]
                               ${!day.isCurrentMonth
                                 ? "text-gray-300"
@@ -457,8 +652,8 @@ export function AttendanceModal({
                 <div className="bg-gray-50 rounded-lg p-6 text-center border border-gray-200">
                   <FiUsers className="mx-auto text-gray-300 mb-2 w-8 h-8" />
                   <p className="text-sm text-gray-600">
-                    {selectedDate && selectedDateObj
-                      ? `Nenhum aluno estava matriculado no dia ${formatDate(selectedDateObj.date)}`
+                    {selectedDate
+                      ? `Nenhum aluno estava matriculado no dia ${formatDate(selectedDate)}`
                       : "Não há alunos matriculados nesta turma"}
                   </p>
                 </div>

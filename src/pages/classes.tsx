@@ -42,6 +42,7 @@ export function Classes() {
   const [newExceptionReason, setNewExceptionReason] = useState("");
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string | null>(null);
   const [attendancesMap, setAttendancesMap] = useState<Map<string, 'PRESENT' | 'ABSENT'>>(new Map());
+  const lastProcessedDateRef = useRef<string | null>(null);
 
   const { classes, isLoading, refetch } = useClasses();
   const { counts: userCounts } = useUserCounts();
@@ -246,7 +247,6 @@ export function Classes() {
   const handleSelectAttendanceDate = (date: Date) => {
     const dateStr = dateToISOString(date);
     setSelectedAttendanceDate(dateStr);
-    setAttendancesMap(new Map());
   };
 
   const handleAttendanceChange = (studentId: string, status: 'PRESENT' | 'ABSENT') => {
@@ -428,7 +428,7 @@ export function Classes() {
 
   // Buscar presenças existentes quando selecionar uma data
   const selectedClassIdForAttendance = isAttendanceModalOpen && selectedClass ? String(selectedClass.id) : null;
-  const { attendances: existingAttendances } = useAttendances(
+  const { attendances: existingAttendances, isLoading: isLoadingAttendances } = useAttendances(
     selectedClassIdForAttendance && selectedAttendanceDate
       ? {
           classId: selectedClassIdForAttendance,
@@ -438,13 +438,31 @@ export function Classes() {
       : undefined
   );
 
+  useEffect(() => {
+    if (lastProcessedDateRef.current !== selectedAttendanceDate) {
+      lastProcessedDateRef.current = null;
+    }
+  }, [selectedAttendanceDate]);
+
   // Carregar presenças existentes no mapa quando mudar a data ou quando carregar
   useEffect(() => {
     if (!selectedAttendanceDate) {
       setAttendancesMap(new Map());
+      lastProcessedDateRef.current = null;
       return;
     }
     
+    // Só atualizar o mapa quando os dados não estiverem carregando
+    if (isLoadingAttendances) {
+      return;
+    }
+    
+    // Só processar se a data mudou
+    if (lastProcessedDateRef.current === selectedAttendanceDate) {
+      return;
+    }
+    
+    // Criar novo mapa apenas com presenças da data selecionada
     const newMap = new Map<string, 'PRESENT' | 'ABSENT'>();
     existingAttendances.forEach((att) => {
       const attDateStr = dateToISOString(att.date);
@@ -452,8 +470,10 @@ export function Classes() {
         newMap.set(att.studentId, att.status);
       }
     });
+    
     setAttendancesMap(newMap);
-  }, [selectedAttendanceDate, existingAttendances]);
+    lastProcessedDateRef.current = selectedAttendanceDate;
+  }, [selectedAttendanceDate, existingAttendances, isLoadingAttendances]);
 
   // Calcular próximas aulas programadas
   const upcomingClassDates = useMemo(() => {
