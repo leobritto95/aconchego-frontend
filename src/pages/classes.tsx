@@ -27,7 +27,7 @@ const DAYS_PER_MONTH = 30; // Dias aproximados por mês para cálculos
 
 export function Classes() {
   const { user: currentUser } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isManageStudentsModalOpen, setIsManageStudentsModalOpen] = useState(false);
@@ -36,10 +36,10 @@ export function Classes() {
   const [isCreateExceptionModalOpen, setIsCreateExceptionModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [studentSearchTerm, setStudentSearchTerm] = useState<string>("");
   const [exceptionsFilter, setExceptionsFilter] = useState<string>("future"); // "all", "future", "past"
   const [selectedClassDate, setSelectedClassDate] = useState<string | null>(null);
-  const [newExceptionReason, setNewExceptionReason] = useState("");
+  const [newExceptionReason, setNewExceptionReason] = useState<string>("");
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string | null>(null);
   const [attendancesMap, setAttendancesMap] = useState<Map<string, 'PRESENT' | 'ABSENT'>>(new Map());
   const lastProcessedDateRef = useRef<string | null>(null);
@@ -70,7 +70,7 @@ export function Classes() {
   });
 
   // Debounce para busca de alunos
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -200,8 +200,17 @@ export function Classes() {
   // Estatísticas
   const stats = useMemo(() => {
     const total = classes.length;
-    const active = classes.filter((cls) => cls.active !== false).length;
-    const inactive = classes.filter((cls) => cls.active === false).length;
+    let active = 0;
+    let inactive = 0;
+
+    classes.forEach((cls) => {
+      if (cls.active === false) {
+        inactive++;
+      } else {
+        active++;
+      }
+    });
+
     const totalStudents = userCounts?.students || 0;
 
     return { total, active, inactive, totalStudents };
@@ -428,7 +437,7 @@ export function Classes() {
 
   // Buscar presenças existentes quando selecionar uma data
   const selectedClassIdForAttendance = isAttendanceModalOpen && selectedClass ? String(selectedClass.id) : null;
-  const { attendances: existingAttendances, isLoading: isLoadingAttendances } = useAttendances(
+  const { attendances: existingAttendances, isLoading: isLoadingAttendances, refetch: refetchAttendances } = useAttendances(
     selectedClassIdForAttendance && selectedAttendanceDate
       ? {
           classId: selectedClassIdForAttendance,
@@ -438,11 +447,30 @@ export function Classes() {
       : undefined
   );
 
-  useEffect(() => {
-    if (lastProcessedDateRef.current !== selectedAttendanceDate) {
-      lastProcessedDateRef.current = null;
+  const handleCancelAttendanceEdit = useCallback(async () => {
+    // Resetar o ref para forçar reprocessamento
+    lastProcessedDateRef.current = null;
+    
+    // Aguardar o refetch completar
+    const result = await refetchAttendances();
+    
+    if (selectedAttendanceDate && result?.data?.success && Array.isArray(result.data.data)) {
+      const newMap = new Map<string, 'PRESENT' | 'ABSENT'>();
+      result.data.data.forEach((att) => {
+        const attDateStr = dateToISOString(att.date);
+        if (attDateStr === selectedAttendanceDate) {
+          newMap.set(att.studentId, att.status);
+        }
+      });
+      setAttendancesMap(newMap);
+      lastProcessedDateRef.current = selectedAttendanceDate;
+    } else if (selectedAttendanceDate) {
+      // Se não houver dados, limpar o Map
+      setAttendancesMap(new Map());
+      lastProcessedDateRef.current = selectedAttendanceDate;
     }
-  }, [selectedAttendanceDate]);
+  }, [refetchAttendances, selectedAttendanceDate]);
+
 
   // Carregar presenças existentes no mapa quando mudar a data ou quando carregar
   useEffect(() => {
@@ -452,24 +480,19 @@ export function Classes() {
       return;
     }
     
-    // Só atualizar o mapa quando os dados não estiverem carregando
-    if (isLoadingAttendances) {
-      return;
-    }
-    
-    // Só processar se a data mudou
-    if (lastProcessedDateRef.current === selectedAttendanceDate) {
-      return;
-    }
+    if (isLoadingAttendances) return;
+    if (lastProcessedDateRef.current === selectedAttendanceDate && lastProcessedDateRef.current !== null) return;
     
     // Criar novo mapa apenas com presenças da data selecionada
     const newMap = new Map<string, 'PRESENT' | 'ABSENT'>();
-    existingAttendances.forEach((att) => {
-      const attDateStr = dateToISOString(att.date);
-      if (attDateStr === selectedAttendanceDate) {
-        newMap.set(att.studentId, att.status);
-      }
-    });
+    if (existingAttendances && Array.isArray(existingAttendances)) {
+      existingAttendances.forEach((att) => {
+        const attDateStr = dateToISOString(att.date);
+        if (attDateStr === selectedAttendanceDate) {
+          newMap.set(att.studentId, att.status);
+        }
+      });
+    }
     
     setAttendancesMap(newMap);
     lastProcessedDateRef.current = selectedAttendanceDate;
@@ -1027,6 +1050,7 @@ export function Classes() {
           students={selectedClassDetails.students || []}
           isLoadingStudents={!selectedClassDetails}
           exceptions={exceptions || []}
+          onCancelEdit={handleCancelAttendanceEdit}
         />
       )}
 

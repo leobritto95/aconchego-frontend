@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { FiX, FiCalendar, FiCheckCircle, FiCheck, FiUser, FiUsers, FiChevronLeft, FiChevronRight, FiEdit2, FiChevronsLeft, FiChevronsRight } from "react-icons/fi";
+import { FiX, FiCalendar, FiCheckCircle, FiCheck, FiUser, FiUsers, FiChevronLeft, FiChevronRight, FiEdit2, FiChevronsLeft, FiChevronsRight, FiSearch } from "react-icons/fi";
 import { Class, User } from "../types";
 import { getPastClassDatesForRange, normalizeDate, formatDate, wasEnrolledOnDate, dateToISOString, parseDateString, PastClassDateInfo } from "../utils/dateUtils";
 import { ClassException } from "../types";
@@ -12,6 +12,10 @@ const DAYS_PER_WEEK = 7; // Dias por semana
 const TOTAL_CALENDAR_DAYS = CALENDAR_WEEKS * DAYS_PER_WEEK; // Total de dias no calendário
 const CALENDAR_OFFSET = 8; // Offset em pixels para posicionar o calendário
 const DATE_SEARCH_RANGE_DAYS = 8; // Range de dias para buscar datas válidas
+const MIN_STUDENTS_FOR_SEARCH = 3; // Mínimo de alunos para mostrar busca
+const DEBOUNCE_DELAY = 300; // ms
+const SEARCH_RANGE_DAYS = 30; // Range de dias para buscar datas válidas em useMemo
+const MAX_ATTEMPTS = 5; // Máximo de tentativas para buscar data anterior
 
 interface AttendanceModalProps {
   isOpen: boolean;
@@ -37,6 +41,7 @@ interface AttendanceModalProps {
   }>;
   isLoadingStudents?: boolean;
   exceptions?: ClassException[];
+  onCancelEdit?: () => void;
 }
 
 export function AttendanceModal({
@@ -53,21 +58,26 @@ export function AttendanceModal({
   students,
   isLoadingStudents = false,
   exceptions = [],
+  onCancelEdit,
 }: AttendanceModalProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
   const calendarRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Memorizar hoje uma vez para evitar recálculos
+  const today = useMemo(() => normalizeDate(new Date()), []);
 
   // Calcular a última data válida
   const lastValidDateInfo = useMemo(() => {
-    const today = normalizeDate(new Date());
     const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
     const classEndDate = selectedClass.endDate ? normalizeDate(selectedClass.endDate) : null;
     
-    // Buscar nos últimos 30 dias primeiro
-    const SEARCH_RANGE_DAYS = 30;
+    // Buscar nos últimos DATE_SEARCH_RANGE_DAYS dias primeiro
     const searchStart = new Date(today);
     searchStart.setDate(searchStart.getDate() - DATE_SEARCH_RANGE_DAYS);
     const searchStartNormalized = searchStart < classStartDate ? classStartDate : normalizeDate(searchStart);
@@ -85,15 +95,13 @@ export function AttendanceModal({
     }
     
     return dates[0] || null;
-  }, [selectedClass, exceptions]);
+  }, [selectedClass, exceptions, today]);
 
   // Calcular primeira data válida (mais antiga)
   const firstValidDate = useMemo(() => {
-    const today = normalizeDate(new Date());
     const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
     
     // Buscar nos primeiros 30 dias após startDate
-    const SEARCH_RANGE_DAYS = 30;
     const searchEnd = new Date(classStartDate);
     searchEnd.setDate(searchEnd.getDate() + SEARCH_RANGE_DAYS);
     const searchEndNormalized = searchEnd > today ? today : normalizeDate(searchEnd);
@@ -119,7 +127,7 @@ export function AttendanceModal({
     }
     
     return dates.length > 0 ? dates[dates.length - 1] : null;
-  }, [selectedClass, exceptions]);
+  }, [selectedClass, exceptions, today]);
 
   // Inicializar currentMonth com o mês da última data válida, ou mês atual se não houver
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -138,12 +146,11 @@ export function AttendanceModal({
     
     // Data final: último dia visível no calendário (último dia do mês atual)
     // Limitar a hoje para não incluir datas futuras
-    const today = normalizeDate(new Date());
     const monthEnd = new Date(year, month + 1, 0);
     const rangeEnd = monthEnd > today ? today : monthEnd;
     
     return { rangeStart, rangeEnd };
-  }, [currentMonth]);
+  }, [currentMonth, today]);
 
   // Atualizar currentMonth quando lastValidDateInfo mudar
   useEffect(() => {
@@ -192,12 +199,91 @@ export function AttendanceModal({
     return filtered;
   }, [students, selectedDate, currentUser]);
 
-  // Resetar modo de edição quando o modal fechar
+  // Calcular estatísticas de presença
+  const attendanceStats = useMemo(() => {
+    if (!selectedDate || enrolledStudents.length === 0) {
+      return { present: 0, absent: 0, noStatus: 0, total: 0, percentage: 0 };
+    }
+
+    let present = 0;
+    let absent = 0;
+    let noStatus = 0;
+
+    enrolledStudents.forEach((enrollment) => {
+      const status = attendances.get(enrollment.studentId);
+      if (status === 'PRESENT') present++;
+      else if (status === 'ABSENT') absent++;
+      else noStatus++;
+    });
+
+    const total = present + absent + noStatus;
+    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    return { present, absent, noStatus, total, percentage };
+  }, [enrolledStudents, attendances, selectedDate]);
+
+  // Filtrar alunos (sem ordenação)
+  const filteredStudents = useMemo(() => {
+    if (!selectedDate) return [];
+
+    // Filtrar por busca
+    if (debouncedSearchTerm.trim()) {
+      const searchLower = debouncedSearchTerm.toLowerCase().trim();
+      return enrolledStudents.filter((enrollment) => {
+        const name = enrollment.student?.name || '';
+        const email = enrollment.student?.email || '';
+        return name.toLowerCase().includes(searchLower) || email.toLowerCase().includes(searchLower);
+      });
+    }
+
+    return enrolledStudents;
+  }, [enrolledStudents, debouncedSearchTerm, selectedDate]);
+
+
+  // Ao entrar em modo de edição, marcar alunos sem status como ABSENT para contabilização
+  useEffect(() => {
+    if (isEditing && selectedDate && enrolledStudents.length > 0) {
+      enrolledStudents.forEach((enrollment) => {
+        const studentId = enrollment.studentId;
+        if (!attendances.has(studentId)) {
+          onAttendanceChange(studentId, 'ABSENT');
+        }
+      });
+    }
+  }, [isEditing, selectedDate, enrolledStudents, attendances, onAttendanceChange]);
+
+  // Resetar modo de edição e busca quando o modal fechar
   useEffect(() => {
     if (!isOpen) {
       setIsEditing(false);
+      setSearchTerm("");
+      setDebouncedSearchTerm("");
     }
   }, [isOpen]);
+
+  const handleCancelEdit = () => {
+    if (onCancelEdit) {
+      onCancelEdit();
+    }
+    setIsEditing(false);
+  };
+
+  // Debounce da busca
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, DEBOUNCE_DELAY);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchTerm]);
 
   // Selecionar automaticamente a última data válida quando o modal abrir
   useEffect(() => {
@@ -208,9 +294,6 @@ export function AttendanceModal({
       onSelectDate(lastValidDateInfo.date);
     }
   }, [isOpen, lastValidDateInfo, selectedDate, onSelectDate]);
-
-  // Memorizar hoje uma vez para evitar recálculos
-  const today = useMemo(() => normalizeDate(new Date()), []);
   
   // Calcular período válido da turma para limitar navegação
   const classPeriod = useMemo(() => {
@@ -222,8 +305,8 @@ export function AttendanceModal({
   const canNavigatePrev = useMemo(() => {
     if (!classPeriod.startDate) return true;
     const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevMonthFirstDay = normalizeDate(prevMonth);
-    return prevMonthFirstDay >= classPeriod.startDate;
+    const prevMonthLastDay = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
+    return normalizeDate(prevMonthLastDay) >= classPeriod.startDate;
   }, [currentMonth, classPeriod]);
 
   // Verificar se pode navegar para o próximo mês
@@ -350,10 +433,8 @@ export function AttendanceModal({
   const getNextDate = useMemo((): PastClassDateInfo | null => {
     if (!selectedDate) return null;
     
-    const today = normalizeDate(new Date());
     const selectedDateObj = parseDateString(selectedDate);
     
-    const SEARCH_RANGE_DAYS = 30;
     const searchEnd = new Date(selectedDateObj);
     searchEnd.setDate(searchEnd.getDate() + SEARCH_RANGE_DAYS);
     const searchEndNormalized = searchEnd > today ? today : normalizeDate(searchEnd);
@@ -367,18 +448,14 @@ export function AttendanceModal({
     
     const nextDates = dates.filter(d => dateToISOString(d.date) !== selectedDate);
     return nextDates.length > 0 ? nextDates[0] : null;
-  }, [selectedDate, selectedClass, exceptions]);
+  }, [selectedDate, selectedClass, exceptions, today]);
 
   // Função auxiliar para buscar data anterior
   const getPreviousDate = useMemo((): PastClassDateInfo | null => {
     if (!selectedDate) return null;
     
-    const today = normalizeDate(new Date());
     const selectedDateObj = parseDateString(selectedDate);
     const classStartDate = selectedClass.startDate ? normalizeDate(selectedClass.startDate) : today;
-    
-    const SEARCH_RANGE_DAYS = 30;
-    const MAX_ATTEMPTS = 5;
     
     let searchStartNormalized: Date;
     const initialSearchStart = new Date(selectedDateObj);
@@ -407,7 +484,7 @@ export function AttendanceModal({
     }
     
     return dates.length > 0 ? dates[0] : null;
-  }, [selectedDate, selectedClass, exceptions]);
+  }, [selectedDate, selectedClass, exceptions, today]);
 
   // Verificar se há próxima/anterior data disponível
   const hasNextDate = !!getNextDate;
@@ -655,11 +732,56 @@ export function AttendanceModal({
         {/* Área de Alunos com scroll */}
         {hasSelectedDate && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-shrink-0 px-4 md:px-6 pt-4 pb-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <FiUser className="w-4 h-4 text-amber-600" />
-                Alunos ({enrolledStudents.length})
-              </label>
+            <div className="flex-shrink-0 px-4 md:px-6 pt-4 pb-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <FiUser className="w-4 h-4 text-amber-600" />
+                    Alunos ({enrolledStudents.length})
+                  </label>
+                  {/* Estatísticas minimalistas */}
+                  {attendanceStats.total > 0 && (
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <FiCheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="font-bold text-gray-900 text-base">{attendanceStats.present}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <FiX className="w-5 h-5 text-red-600" />
+                        <span className="font-bold text-gray-900 text-base">{attendanceStats.absent}</span>
+                      </span>
+                      {attendanceStats.noStatus > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full border-2 border-gray-400"></span>
+                          <span className="font-bold text-gray-900 text-base">{attendanceStats.noStatus}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Campo de busca */}
+                {enrolledStudents.length >= MIN_STUDENTS_FOR_SEARCH && attendances.size > 0 && (
+                  <div className="relative flex-1 max-w-xs">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      disabled={isPending}
+                      placeholder="Buscar por nome ou email..."
+                      className={`w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all bg-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                )}
+              </div>
+              {/* Mensagem quando nenhum resultado é encontrado na busca */}
+              {debouncedSearchTerm.trim() && filteredStudents.length === 0 && enrolledStudents.length > 0 && (
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-500">
+                    Nenhum aluno encontrado para "{debouncedSearchTerm}"
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 flex flex-col">
@@ -701,35 +823,62 @@ export function AttendanceModal({
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2 md:space-y-3">
-                      {enrolledStudents.map((enrollment) => {
+                    <div className="space-y-1.5 md:space-y-2">
+                      {filteredStudents.map((enrollment) => {
                         const studentId = enrollment.studentId;
                         const currentStatus = attendances.get(studentId) || (isEditMode ? 'ABSENT' : null);
                         const studentName = enrollment.student?.name || 'Aluno';
                         const studentEmail = enrollment.student?.email || '';
+
+                        // Determinar cor do indicador e do card
+                        const getStatusColor = (status: 'PRESENT' | 'ABSENT' | null): 'green' | 'red' | 'gray' => {
+                          if (status === 'PRESENT') return 'green';
+                          if (status === 'ABSENT') return 'red';
+                          return 'gray';
+                        };
+                        const statusColor = getStatusColor(currentStatus);
 
                         return (
                           <div
                             key={enrollment.id}
                             className={`bg-white border rounded-lg transition-all ${
                               currentStatus === 'PRESENT'
-                                ? 'border-green-200 bg-green-50/30'
+                                ? 'border-green-300 bg-green-50/40'
                                 : currentStatus === 'ABSENT'
-                                ? 'border-red-200 bg-red-50/30'
+                                ? 'border-red-300 bg-red-50/40'
                                 : 'border-gray-200 hover:border-gray-300'
                             } ${isEditMode ? 'hover:shadow-md' : 'hover:shadow-sm'}`}
                           >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3 p-2.5 md:p-4">
-                              {/* Informações do Aluno */}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm md:text-base font-semibold text-gray-900">{studentName}</p>
-                                <p className="text-xs text-gray-500 mt-0.5 truncate">{studentEmail}</p>
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3 p-2 md:p-3">
+                              {/* Informações do Aluno com indicador */}
+                              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                {/* Indicador visual colorido */}
+                                <span
+                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    statusColor === 'green'
+                                      ? 'bg-green-600'
+                                      : statusColor === 'red'
+                                      ? 'bg-red-600'
+                                      : 'bg-gray-400'
+                                  }`}
+                                  title={
+                                    currentStatus === 'PRESENT'
+                                      ? 'Presente'
+                                      : currentStatus === 'ABSENT'
+                                      ? 'Ausente'
+                                      : 'Sem status'
+                                  }
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm md:text-base font-semibold text-gray-900">{studentName}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5 truncate">{studentEmail}</p>
+                                </div>
                               </div>
 
                               {/* Botões de Presença/Ausência */}
                               <div className="flex gap-2 md:flex-shrink-0">
                                 <label
-                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1 md:gap-1.5 py-1.5 md:py-2 px-2.5 md:px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
+                                  className={`min-w-[100px] flex items-center justify-center gap-1.5 py-1.5 md:py-2 px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
                                     isEditMode
                                       ? currentStatus === 'PRESENT'
                                         ? 'border-green-600 bg-green-600 text-white shadow-sm hover:bg-green-700 hover:border-green-700'
@@ -751,7 +900,7 @@ export function AttendanceModal({
                                   <span>Presente</span>
                                 </label>
                                 <label
-                                  className={`flex-1 md:flex-initial flex items-center justify-center gap-1 md:gap-1.5 py-1.5 md:py-2 px-2.5 md:px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
+                                  className={`min-w-[100px] flex items-center justify-center gap-1.5 py-1.5 md:py-2 px-3 rounded-lg border-2 cursor-pointer transition-all font-medium text-xs md:text-sm ${
                                     isEditMode
                                       ? currentStatus === 'ABSENT'
                                         ? 'border-red-600 bg-red-600 text-white shadow-sm hover:bg-red-700 hover:border-red-700'
@@ -791,8 +940,8 @@ export function AttendanceModal({
             <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                onClick={handleCancelEdit}
+                className="min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
                 disabled={isPending}
               >
                 Cancelar
@@ -803,7 +952,7 @@ export function AttendanceModal({
                   setIsEditing(false);
                 }}
                 disabled={isPending || !hasSelectedDate || !hasStudents}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="min-w-[120px] px-4 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isPending ? (
                   <>
@@ -824,14 +973,14 @@ export function AttendanceModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                className="min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
               >
                 Fechar
               </button>
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isPending || !hasSelectedDate || !hasStudents}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="min-w-[120px] px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <FiEdit2 className="w-4 h-4" />
                 Editar
@@ -843,7 +992,7 @@ export function AttendanceModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                className="min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
               >
                 Fechar
               </button>
