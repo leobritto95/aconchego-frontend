@@ -831,7 +831,7 @@ export function AttendanceModal({
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isPending || !hasSelectedDate || !hasStudents}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-amber-900 rounded-lg hover:bg-amber-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <FiEdit2 className="w-4 h-4" />
                 Editar
