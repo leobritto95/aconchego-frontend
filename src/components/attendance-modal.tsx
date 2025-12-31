@@ -222,8 +222,8 @@ export function AttendanceModal({
   const canNavigatePrev = useMemo(() => {
     if (!classPeriod.startDate) return true;
     const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevMonthLastDay = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0);
-    return normalizeDate(prevMonthLastDay) >= classPeriod.startDate;
+    const prevMonthFirstDay = normalizeDate(prevMonth);
+    return prevMonthFirstDay >= classPeriod.startDate;
   }, [currentMonth, classPeriod]);
 
   // Verificar se pode navegar para o próximo mês
